@@ -3,6 +3,7 @@ package card
 import (
 	"fmt"
 	"math/rand"
+	"time"
 )
 
 type Suit int
@@ -114,4 +115,19 @@ func EvaluateAceOrNothing(hand Card) (string, error) {
 	result := hand.String() + ": LOSE"
 
 	return result, nil
+}
+
+func NewAceOrNothing() string {
+	deck := NewDeck()
+	random := rand.New(rand.NewSource(time.Now().UnixNano()))
+	shuffledDeck := deck.Shuffle(random)
+	hand, err := shuffledDeck.Deal(1)
+	if err != nil {
+		fmt.Errorf("unable to deal card, %s", err)
+	}
+	result, err := EvaluateAceOrNothing(hand)
+	if err != nil {
+		fmt.Errorf("unable to evaluate hand,%s", err)
+	}
+	return result
 }

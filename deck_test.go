@@ -8,41 +8,58 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-// func TestCard(t *testing.T) {
-
-// 	card := card.Card{
-// 		Rank: card.Ace,
-// 		Suit: card.Heart,
-// 	}
-
-// 	got := card.String()
-
-// 	want := "Ace of Hearts"
-
-// 	if want != got {
-// 		t.Fatalf("want: %s, got: %s", want, got)
-// 	}
-
-// }
-
 func TestDeal(t *testing.T) {
-
+	t.Parallel()
 	random := rand.New(rand.NewSource(1))
 
-	deck := card.NewDeck(random)
+	deck := card.NewDeck()
 
-	got, err := deck.Deal()
+	shuffle := deck.Shuffle(random)
+
+	got, err := shuffle.Deal(1)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	want := card.Card{
-		Suit: card.Heart,
-		Rank: card.Ace,
+		Suit: card.Diamond,
+		Rank: card.Nine,
 	}
 
-	if !cmp.Equal(want, got) {
+	if !cmp.Equal(want.String(), got.String()) {
 		t.Fatal(cmp.Diff(want, got))
+	}
+
+}
+
+func TestAceOrNothing(t *testing.T) {
+
+	t.Parallel()
+	// test ace
+	aceHand := card.Card{
+		Suit: card.Spade,
+		Rank: card.Ace,
+	}
+	result, err := card.EvaluateAceOrNothing(aceHand)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if result != "Ace: WIN" {
+		t.Fatalf("wanted: Ace: WIN, got:%s", result)
+	}
+
+	notAceHand := card.Card{
+		Suit: card.Spade,
+		Rank: card.Jack,
+	}
+	result, err = card.EvaluateAceOrNothing(notAceHand)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if result == "Ace: WIN" {
+		t.Fatalf("wanted: LOSE, got:%s", result)
 	}
 
 }

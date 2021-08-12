@@ -21,12 +21,14 @@ func TestDeal(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := card.Card{
-		Suit: card.Diamond,
-		Rank: card.Nine,
+	want := []card.Card{
+		{
+			Suit: card.Diamond,
+			Rank: card.Nine,
+		},
 	}
 
-	if !cmp.Equal(want.String(), got.String()) {
+	if !cmp.Equal(want, got) {
 		t.Fatal(cmp.Diff(want, got))
 	}
 
@@ -36,9 +38,11 @@ func TestAceOrNothing(t *testing.T) {
 
 	t.Parallel()
 	// test ace
-	aceHand := card.Card{
-		Suit: card.Spade,
-		Rank: card.Ace,
+	aceHand := []card.Card{
+		{
+			Suit: card.Spade,
+			Rank: card.Ace,
+		},
 	}
 	result, err := card.EvaluateAceOrNothing(aceHand)
 	if err != nil {
@@ -49,9 +53,11 @@ func TestAceOrNothing(t *testing.T) {
 		t.Fatalf("wanted: Ace: WIN, got:%s", result)
 	}
 
-	notAceHand := card.Card{
-		Suit: card.Spade,
-		Rank: card.Jack,
+	notAceHand := []card.Card{
+		{
+			Suit: card.Spade,
+			Rank: card.Jack,
+		},
 	}
 	result, err = card.EvaluateAceOrNothing(notAceHand)
 	if err != nil {

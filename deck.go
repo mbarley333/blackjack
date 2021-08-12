@@ -97,22 +97,25 @@ func (d *Deck) Shuffle(random *rand.Rand) Deck {
 
 }
 
-func (d *Deck) Deal(numberCards int) (Card, error) {
-	var cards Card
+func (d *Deck) Deal(numberCards int) ([]Card, error) {
+	var card Card
+	var cards []Card
 
 	for i := 0; i < numberCards; i++ {
-		cards, *d = (*d)[0], (*d)[1:]
+		card, *d = (*d)[0], (*d)[1:]
+		cards = append(cards, card)
+
 	}
 	return cards, nil
 
 }
 
-// game logic
-func EvaluateAceOrNothing(hand Card) (string, error) {
-	if hand.Rank == Ace {
+func EvaluateAceOrNothing(hand []Card) (string, error) {
+
+	if hand[0].Rank == Ace {
 		return "Ace: WIN", nil
 	}
-	result := hand.String() + ": LOSE"
+	result := hand[0].String() + ": LOSE"
 
 	return result, nil
 }
@@ -123,11 +126,11 @@ func NewAceOrNothing() string {
 	shuffledDeck := deck.Shuffle(random)
 	hand, err := shuffledDeck.Deal(1)
 	if err != nil {
-		fmt.Errorf("unable to deal card, %s", err)
+		fmt.Printf("unable to deal card, %s", err)
 	}
 	result, err := EvaluateAceOrNothing(hand)
 	if err != nil {
-		fmt.Errorf("unable to evaluate hand,%s", err)
+		fmt.Printf("unable to evaluate hand,%s", err)
 	}
 	return result
 }

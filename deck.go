@@ -69,15 +69,33 @@ func (c Card) String() string {
 	return cardName
 }
 
-type Deck []Card
+type Deck struct {
+	cards []Card
+	count int
+}
 
-func NewDeck() Deck {
+type Option func(*Deck) error
 
-	deck := Deck{}
+func WithNumberOfDecks(number int) Option {
+	return func(d *Deck) error {
+		d.count = number
+		return nil
+	}
+}
+
+func NewDeck(opts ...Option) *Deck {
+
+	deck := &Deck{
+		count: 1,
+	}
+
+	for _, o := range opts {
+		o(deck)
+	}
 
 	for _, suit := range suits {
 		for _, rank := range ranks {
-			deck = append(deck, Card{Suit: suit, Rank: rank})
+			deck.cards = append(deck.cards, Card{Suit: suit, Rank: rank})
 		}
 
 	}
@@ -87,13 +105,15 @@ func NewDeck() Deck {
 
 func (d *Deck) Shuffle(random *rand.Rand) Deck {
 
-	shuffled_deck := make([]Card, len(*d))
-	perm := random.Perm(len(*d))
+	shuffled_cards := make([]Card, len(d.cards))
+	perm := random.Perm(len(d.cards))
 
 	for i, j := range perm {
-		shuffled_deck[i] = (*d)[j]
+		shuffled_cards[i] = d.cards[j]
 	}
-	return shuffled_deck
+	return Deck{
+		cards: shuffled_cards,
+	}
 
 }
 
@@ -102,7 +122,7 @@ func (d *Deck) Deal(numberCards int) ([]Card, error) {
 	var cards []Card
 
 	for i := 0; i < numberCards; i++ {
-		card, *d = (*d)[0], (*d)[1:]
+		card, d.cards = d.cards[0], d.cards[1:]
 		cards = append(cards, card)
 
 	}

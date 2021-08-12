@@ -12,7 +12,9 @@ func TestDeal(t *testing.T) {
 	t.Parallel()
 	random := rand.New(rand.NewSource(1))
 
-	deck := card.NewDeck()
+	deck := card.NewDeck(
+		card.WithNumberOfDecks(3),
+	)
 
 	shuffle := deck.Shuffle(random)
 

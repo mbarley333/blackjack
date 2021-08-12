@@ -141,7 +141,9 @@ func EvaluateAceOrNothing(hand []Card) (string, error) {
 }
 
 func NewAceOrNothing() string {
-	deck := NewDeck()
+	deck := NewDeck(
+		WithNumberOfDecks(3),
+	)
 	random := rand.New(rand.NewSource(time.Now().UnixNano()))
 	shuffledDeck := deck.Shuffle(random)
 	hand, err := shuffledDeck.Deal(1)

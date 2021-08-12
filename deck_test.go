@@ -39,7 +39,7 @@ func TestDeal(t *testing.T) {
 func TestAceOrNothing(t *testing.T) {
 
 	t.Parallel()
-	// test ace
+
 	aceHand := []card.Card{
 		{
 			Suit: card.Spade,

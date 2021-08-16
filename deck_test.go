@@ -51,8 +51,8 @@ func TestEvaluateAceOrNothing(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if result != "Ace: WIN" {
-		t.Fatalf("wanted: Ace: WIN, got:%s", result)
+	if result != "Ace of Spades: WIN" {
+		t.Fatalf("wanted: Ace of Spades: WIN, got:%s", result)
 	}
 
 	notAceHand := []card.Card{
@@ -66,7 +66,7 @@ func TestEvaluateAceOrNothing(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if result == "Ace: WIN" {
+	if result != "Jack of Spades: LOSE" {
 		t.Fatalf("wanted: LOSE, got:%s", result)
 	}
 

@@ -134,7 +134,8 @@ func (d *Deck) Deal(numberCards int) ([]Card, error) {
 func EvaluateAceOrNothing(hand []Card) (string, error) {
 
 	if hand[0].Rank == Ace {
-		return "Ace: WIN", nil
+		result := hand[0].String() + ": WIN"
+		return result, nil
 	}
 	result := hand[0].String() + ": LOSE"
 

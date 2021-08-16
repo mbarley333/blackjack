@@ -36,7 +36,7 @@ func TestDeal(t *testing.T) {
 
 }
 
-func TestAceOrNothing(t *testing.T) {
+func TestEvaluateAceOrNothing(t *testing.T) {
 
 	t.Parallel()
 

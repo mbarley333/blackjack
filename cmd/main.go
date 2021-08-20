@@ -2,9 +2,12 @@ package main
 
 import (
 	"card"
+	"log"
 )
 
 func main() {
-	card.NewAceOrNothing()
-
+	err := card.NewBlackjackGame()
+	if err != nil {
+		log.Fatal(err)
+	}
 }

@@ -13,7 +13,7 @@ func TestDeal(t *testing.T) {
 	random := rand.New(rand.NewSource(1))
 
 	deck := card.NewDeck(
-		card.WithNumberOfDecks(3),
+		card.WithNumberOfDecks(1),
 	)
 
 	shuffle := deck.Shuffle(random)
@@ -34,40 +34,12 @@ func TestDeal(t *testing.T) {
 		t.Fatal(cmp.Diff(want, got))
 	}
 
-}
+	wantCardsRemaining := 51
 
-func TestEvaluateAceOrNothing(t *testing.T) {
+	gotCardsRemaining := len(shuffle.Cards)
 
-	t.Parallel()
-
-	aceHand := []card.Card{
-		{
-			Suit: card.Spade,
-			Rank: card.Ace,
-		},
-	}
-	result, err := card.EvaluateAceOrNothing(aceHand)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if result != "Ace of Spades: WIN" {
-		t.Fatalf("wanted: Ace of Spades: WIN, got:%s", result)
-	}
-
-	notAceHand := []card.Card{
-		{
-			Suit: card.Spade,
-			Rank: card.Jack,
-		},
-	}
-	result, err = card.EvaluateAceOrNothing(notAceHand)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if result != "Jack of Spades: LOSE" {
-		t.Fatalf("wanted: LOSE, got:%s", result)
+	if wantCardsRemaining != gotCardsRemaining {
+		t.Fatalf("want: %d, got: %d", wantCardsRemaining, gotCardsRemaining)
 	}
 
 }

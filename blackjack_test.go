@@ -72,6 +72,50 @@ func TestBlackjack(t *testing.T) {
 
 }
 
-func TestBlackjackScoring(t *testing.T) {
+func TestBlackjackScoringFaces(t *testing.T) {
+	card1 := card.Card{
+		Rank: card.Nine,
+	}
+
+	card2 := card.Card{
+		Rank: card.Jack,
+	}
+
+	player := card.Hand{}
+
+	player.ScoreCards(card1)
+	player.ScoreCards(card2)
+
+	want := 19
+	got := player.Score
+
+	if want != got {
+		t.Fatalf("want: %d, got: %d", want, got)
+	}
+
+}
+
+func TestBlackjackAces(t *testing.T) {
+	card1 := []card.Card{
+		{
+			Rank: card.Ace,
+		},
+	}
+	player := card.Hand{Cards: card1}
+
+	// first card ace
+	got := player.EvaluateAce()
+
+	want := 0
+
+	if want != got {
+		t.Fatalf("wanted first card ace: %d, got: %d", want, got)
+	}
+
+	card2 := []card.Card{
+		{
+			Rank: card.Ten,
+		},
+	}
 
 }

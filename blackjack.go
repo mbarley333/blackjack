@@ -52,7 +52,31 @@ func (h *Hand) Hit(shuffled *Deck) error {
 
 func (h *Hand) ScoreCards(card Card) {
 
-	h.Score += int(card.Rank)
+	var cardScore int
+
+	if card.Rank > Ten {
+		cardScore = 10
+	} else if card.Rank == Ace {
+
+	} else {
+		cardScore = int(card.Rank)
+	}
+	h.Score += cardScore
+
+}
+
+func (h *Hand) EvaluateAce() int {
+
+	switch len(h.Cards) {
+	case 1:
+		return 0
+	default:
+		ace1 := h.Score + 1
+		ace11 := h.Score + 11
+		fmt.Println("Would you like %d or %d?", ace1, ace11)
+
+	}
+
 }
 
 func NewBlackjackGame() error {

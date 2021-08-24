@@ -3,7 +3,6 @@ package card_test
 import (
 	"card"
 	"math/rand"
-	"strconv"
 	"testing"
 )
 
@@ -144,11 +143,11 @@ func TestWinner(t *testing.T) {
 		Cards: dealerCards,
 	}
 
-	got := card.IsPlayerWinner(player.Score(), dealer.Score())
-	want := true
+	got := card.GetWinStatus(player.Score(), dealer.Score())
+	want := "WINS"
 
 	if want != got {
-		t.Fatalf("want: %s, got:%s", strconv.FormatBool(want), strconv.FormatBool(got))
+		t.Fatalf("want: %s, got:%s", want, got)
 	}
 
 }

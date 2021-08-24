@@ -94,7 +94,7 @@ func NewBlackjackGame() error {
 
 	var status string
 
-	for strings.ToLower(status) != "s" && strings.ToLower(status) != "b" {
+	for strings.ToLower(status) != "s" && strings.ToLower(status) != "bust" {
 		fmt.Printf("%s would you like to (H)it or (S)tand? ", player.Player)
 		fmt.Scanln(&status)
 		if strings.ToLower(status) == "h" {
@@ -104,13 +104,13 @@ func NewBlackjackGame() error {
 			}
 			fmt.Println(player.String())
 			if player.Score() > 21 {
-				status = "b"
+				status = "bust"
 			}
 
 		}
 	}
 
-	if status != "b" {
+	if status != "bust" {
 		fmt.Printf("\n****************FINAL ROUND***************\n")
 
 		for dealer.Score() <= 16 || dealer.MinScore() < 17 {
@@ -122,20 +122,18 @@ func NewBlackjackGame() error {
 		fmt.Println(dealer.String())
 		fmt.Println(player.String())
 
-		playerWin := IsPlayerWinner(player.Score(), dealer.Score())
-		if playerWin {
-			fmt.Println(player.Player + " WINS!!!")
-		} else {
-			fmt.Println(player.Player + " LOSES")
-		}
+		playerWinStatus := GetWinStatus(player.Score(), dealer.Score())
+		fmt.Println(player.Player + " " + playerWinStatus)
 	}
 
 	return nil
 }
 
-func IsPlayerWinner(player, dealer int) bool {
-	if dealer > 21 {
-		return true
+func GetWinStatus(player, dealer int) string {
+	if dealer > 21 || player > dealer {
+		return "WINS"
+	} else if dealer == player {
+		return "TIES"
 	}
-	return player > dealer
+	return "LOSES"
 }

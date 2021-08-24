@@ -3,6 +3,7 @@ package card_test
 import (
 	"card"
 	"math/rand"
+	"strconv"
 	"testing"
 )
 
@@ -21,12 +22,10 @@ func TestBlackjack(t *testing.T) {
 	player := card.Hand{Player: "Player1"}
 	var err error
 
-	playerCards, err := shuffle.Deal(2)
+	player.Cards, err = shuffle.Deal(2)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	player.AddCards(playerCards)
 
 	got := player.String()
 	want := "Player1 has 14: [Nine of Diamonds][Five of Spades]"
@@ -36,7 +35,7 @@ func TestBlackjack(t *testing.T) {
 	}
 
 	wantPlayerScore := 14
-	gotPlayerScore := player.Score
+	gotPlayerScore := player.Score()
 
 	if want != got {
 		t.Fatalf("wanted: %d, got: %d", wantPlayerScore, gotPlayerScore)
@@ -44,12 +43,10 @@ func TestBlackjack(t *testing.T) {
 
 	dealer := card.Hand{Player: "Dealer"}
 
-	dealerCards, err := shuffle.Deal(2)
+	dealer.Cards, err = shuffle.Deal(2)
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	dealer.AddCards(dealerCards)
 
 	want = "Dealer: [Three of Spades][???]"
 	got = dealer.DealerString()
@@ -73,21 +70,21 @@ func TestBlackjack(t *testing.T) {
 }
 
 func TestBlackjackScoringFaces(t *testing.T) {
-	card1 := card.Card{
-		Rank: card.Nine,
+	t.Parallel()
+
+	cards := []card.Card{
+		{
+			Rank: card.Nine,
+		},
+		{
+			Rank: card.Jack,
+		},
 	}
 
-	card2 := card.Card{
-		Rank: card.Jack,
-	}
-
-	player := card.Hand{}
-
-	player.ScoreCards(card1)
-	player.ScoreCards(card2)
+	player := card.Hand{Cards: cards}
 
 	want := 19
-	got := player.Score
+	got := player.Score()
 
 	if want != got {
 		t.Fatalf("want: %d, got: %d", want, got)
@@ -95,27 +92,63 @@ func TestBlackjackScoringFaces(t *testing.T) {
 
 }
 
-func TestBlackjackAces(t *testing.T) {
-	card1 := []card.Card{
+func TestBlackjackScoring21(t *testing.T) {
+	t.Parallel()
+
+	cards := []card.Card{
 		{
 			Rank: card.Ace,
 		},
+		{
+			Rank: card.Jack,
+		},
 	}
-	player := card.Hand{Cards: card1}
 
-	// first card ace
-	got := player.EvaluateAce()
+	player := card.Hand{Cards: cards}
 
-	want := 0
+	want := 21
+	got := player.Score()
 
 	if want != got {
-		t.Fatalf("wanted first card ace: %d, got: %d", want, got)
+		t.Fatalf("want: %d, got: %d", want, got)
 	}
 
-	card2 := []card.Card{
+}
+
+func TestWinner(t *testing.T) {
+	t.Parallel()
+
+	playerCards := []card.Card{
 		{
-			Rank: card.Ten,
+			Rank: card.Ace,
 		},
+		{
+			Rank: card.Jack,
+		},
+	}
+
+	player := card.Hand{
+		Cards: playerCards,
+	}
+
+	dealerCards := []card.Card{
+		{
+			Rank: card.Eight,
+		},
+		{
+			Rank: card.Jack,
+		},
+	}
+
+	dealer := card.Hand{
+		Cards: dealerCards,
+	}
+
+	got := card.IsPlayerWinner(player.Score(), dealer.Score())
+	want := true
+
+	if want != got {
+		t.Fatalf("want: %s, got:%s", strconv.FormatBool(want), strconv.FormatBool(got))
 	}
 
 }

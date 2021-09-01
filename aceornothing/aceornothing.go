@@ -1,15 +1,16 @@
-package card
+package aceornothing
 
 import (
+	"cards"
 	"fmt"
 	"math/rand"
 	"strings"
 	"time"
 )
 
-func EvaluateAceOrNothing(hand []Card) (string, error) {
+func EvaluateAceOrNothing(hand []cards.Card) (string, error) {
 
-	if hand[0].Rank == Ace {
+	if hand[0].Rank == cards.Ace {
 		result := hand[0].String() + ": WIN"
 		return result, nil
 	}
@@ -19,8 +20,8 @@ func EvaluateAceOrNothing(hand []Card) (string, error) {
 }
 
 func NewAceOrNothing() {
-	deck := NewDeck(
-		WithNumberOfDecks(3),
+	deck := cards.NewDeck(
+		cards.WithNumberOfDecks(3),
 	)
 	random := rand.New(rand.NewSource(time.Now().UnixNano()))
 	shuffledDeck := deck.Shuffle(random)

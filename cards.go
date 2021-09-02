@@ -92,11 +92,13 @@ func NewDeck(opts ...Option) *Deck {
 		o(deck)
 	}
 
-	for _, suit := range suits {
-		for _, rank := range ranks {
-			deck.Cards = append(deck.Cards, Card{Suit: suit, Rank: rank})
-		}
+	for i := 0; i < deck.count; i++ {
+		for _, suit := range suits {
+			for _, rank := range ranks {
+				deck.Cards = append(deck.Cards, Card{Suit: suit, Rank: rank})
+			}
 
+		}
 	}
 	return deck
 

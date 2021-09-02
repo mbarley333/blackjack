@@ -43,7 +43,7 @@ func WithCustomDeck(deck cards.Deck) Option {
 
 func NewBlackjackGame(opts ...Option) (*Game, error) {
 	deck := cards.NewDeck(
-		cards.WithNumberOfDecks(3),
+		cards.WithNumberOfDecks(1),
 	)
 	random := rand.New(rand.NewSource(time.Now().UnixNano()))
 
@@ -55,6 +55,7 @@ func NewBlackjackGame(opts ...Option) (*Game, error) {
 		o(game)
 	}
 
+	fmt.Println(game.Shoe.Cards)
 	return game, nil
 }
 
@@ -68,17 +69,23 @@ func (g *Game) Deal() cards.Card {
 
 }
 
-func (g *Game) ResetBlackjack() {
-	g.Player.Hand = []cards.Card{}
-	g.Dealer.Hand = []cards.Card{}
-	g.Player.Action = None
-	g.Start()
-	g.DealerStart()
-	outcome := g.Outcome()
-	fmt.Println(ReportWinner(outcome))
+func (g *Game) RunCLI() {
+
+	for {
+		g.Player.Hand = []cards.Card{}
+		g.Dealer.Hand = []cards.Card{}
+		g.Player.Action = None
+		g.Start()
+		g.DealerStart()
+		outcome := g.Outcome()
+		fmt.Println(ReportWinner(outcome))
+	}
 }
 
 func (g *Game) Start() {
+
+	fmt.Println("")
+	fmt.Println("****** NEW GAME ******")
 
 	g.Player.GetCard(g.Deal())
 	g.Dealer.GetCard(g.Deal())
@@ -90,8 +97,6 @@ func (g *Game) Start() {
 
 	if g.Player.Score() == 21 {
 		g.Player.Action = Stand
-		g.Outcome()
-
 	}
 
 	for g.Player.Action != Stand {
@@ -116,7 +121,7 @@ func (g *Game) Start() {
 func (g *Game) DealerStart() {
 
 	fmt.Println("")
-	fmt.Println("******FINAL ROUND******")
+	fmt.Println("****** FINAL ROUND ******")
 
 	for g.Dealer.Score() <= 16 || (g.Dealer.Score() == 17 && g.Dealer.MinScore() != 17) {
 
@@ -158,9 +163,11 @@ func (g *Game) Outcome() Outcome {
 		return PlayerBust
 	} else if g.Player.Score() > g.Dealer.Score() {
 		return PlayerWin
+	} else if g.Player.Score() < g.Dealer.Score() {
+		return PlayerLose
+	} else {
+		return PlayerTie
 	}
-
-	return PlayerLose
 
 }
 

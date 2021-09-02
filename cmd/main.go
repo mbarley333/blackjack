@@ -1,13 +1,14 @@
 package main
 
 import (
-	"card"
+	"cards/blackjack"
 	"log"
 )
 
 func main() {
-	err := card.NewBlackjackGame()
+	g, err := blackjack.NewBlackjackGame()
 	if err != nil {
 		log.Fatal(err)
 	}
+	g.ResetBlackjack()
 }

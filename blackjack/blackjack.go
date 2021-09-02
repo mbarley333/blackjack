@@ -23,7 +23,7 @@ const (
 	PlayerWin
 	PlayerLose
 	PlayerTie
-	Bust
+	PlayerBust
 )
 
 type Game struct {
@@ -68,7 +68,25 @@ func (g *Game) Deal() cards.Card {
 
 }
 
+func (g *Game) ResetBlackjack() {
+	g.Player.Hand = []cards.Card{}
+	g.Dealer.Hand = []cards.Card{}
+	g.Player.Action = None
+	g.Start()
+	g.DealerStart()
+	outcome := g.Outcome()
+	fmt.Println(ReportWinner(outcome))
+}
+
 func (g *Game) Start() {
+
+	g.Player.GetCard(g.Deal())
+	g.Dealer.GetCard(g.Deal())
+	g.Player.GetCard(g.Deal())
+	g.Dealer.GetCard(g.Deal())
+
+	fmt.Println(g.Dealer.DealerString())
+	fmt.Println("Player has " + g.Player.String())
 
 	if g.Player.Score() == 21 {
 		g.Player.Action = Stand
@@ -87,13 +105,29 @@ func (g *Game) Start() {
 			fmt.Println(g.Player.String())
 			if g.Player.Score() > 21 {
 				g.Player.Action = Stand
-				fmt.Println("Player BUST")
 				g.Outcome()
 			}
 
 		}
 	}
 
+}
+
+func (g *Game) DealerStart() {
+
+	fmt.Println("")
+	fmt.Println("******FINAL ROUND******")
+
+	for g.Dealer.Score() <= 16 || (g.Dealer.Score() == 17 && g.Dealer.MinScore() != 17) {
+
+		g.Dealer.GetCard(g.Deal())
+
+		fmt.Println("Dealer has " + g.Dealer.String())
+		fmt.Println("Player has " + g.Player.String())
+		fmt.Println("")
+
+	}
+	g.Dealer.Action = Stand
 }
 
 func (g *Game) SetPlayerAction() {
@@ -114,15 +148,6 @@ func (g *Game) SetPlayerAction() {
 
 }
 
-func (g *Game) DealerStart() {
-	for g.Dealer.Score() <= 16 || g.Dealer.MinScore() < 17 {
-		fmt.Println(g.Dealer.Score())
-		g.Dealer.GetCard(g.Deal())
-
-	}
-	g.Dealer.Action = Stand
-}
-
 func (g *Game) Outcome() Outcome {
 
 	if g.Player.Score() == 21 && len(g.Player.Hand) == 2 {
@@ -130,11 +155,24 @@ func (g *Game) Outcome() Outcome {
 	} else if g.Dealer.Score() > 21 {
 		return PlayerWin
 	} else if g.Player.Score() > 21 {
-		return PlayerLose
+		return PlayerBust
+	} else if g.Player.Score() > g.Dealer.Score() {
+		return PlayerWin
 	}
 
 	return PlayerLose
 
+}
+
+func ReportWinner(outcome Outcome) string {
+	reportMap := make(map[Outcome]string)
+	reportMap[PlayerBlackjack] = "Blackjack!  Player wins"
+	reportMap[PlayerWin] = "Player wins!"
+	reportMap[PlayerLose] = "Player loses"
+	reportMap[PlayerTie] = "Player and Dealer tie"
+	reportMap[PlayerBust] = "Bust!  Player loses"
+
+	return "***** " + reportMap[outcome] + " *****"
 }
 
 type Player struct {
@@ -148,7 +186,7 @@ func (p Player) String() string {
 	for _, card := range p.Hand {
 		showCards = showCards + "[" + card.String() + "]"
 	}
-	return "Player has " + fmt.Sprint(p.Score()) + ": " + showCards
+	return fmt.Sprint(p.Score()) + ": " + showCards
 }
 
 func (p Player) DealerString() string {

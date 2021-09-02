@@ -39,21 +39,18 @@ func TestNewBlackjackGame(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	g.Player.GetCard(g.Deal())
-	g.Dealer.GetCard(g.Deal())
-	g.Player.GetCard(g.Deal())
-	g.Dealer.GetCard(g.Deal())
-
 	g.Start()
 
 	g.DealerStart()
 
-	got := g.Outcome()
+	outcome := g.Outcome()
 
-	want := blackjack.PlayerBlackjack
+	got := blackjack.ReportWinner(outcome)
+
+	want := "***** Blackjack!  Player wins *****"
 
 	if want != got {
-		t.Fatalf("wanted: %d, got: %d", want, got)
+		t.Fatalf("wanted: %s, got: %s", want, got)
 	}
 
 }
@@ -81,23 +78,20 @@ func TestDealerBust(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	g.Player.GetCard(g.Deal())
-	g.Dealer.GetCard(g.Deal())
-	g.Player.GetCard(g.Deal())
-	g.Dealer.GetCard(g.Deal())
-
 	g.Player.Action = blackjack.Stand
 
 	g.Start()
 
 	g.DealerStart()
 
-	got := g.Outcome()
+	outcome := g.Outcome()
 
-	want := blackjack.PlayerWin
+	got := blackjack.ReportWinner(outcome)
+
+	want := "***** Player wins! *****"
 
 	if want != got {
-		t.Fatalf("wanted: %d, got: %d", want, got)
+		t.Fatalf("wanted: %s, got: %s", want, got)
 	}
 
 }
@@ -125,20 +119,17 @@ func TestPlayerBust(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	g.Player.GetCard(g.Deal())
-	g.Dealer.GetCard(g.Deal())
-	g.Player.GetCard(g.Deal())
-	g.Dealer.GetCard(g.Deal())
-
 	g.Player.Action = blackjack.Hit
 	g.Start()
 
-	got := g.Outcome()
+	outcome := g.Outcome()
 
-	want := blackjack.PlayerLose
+	got := blackjack.ReportWinner(outcome)
+
+	want := "***** Bust!  Player loses *****"
 
 	if want != got {
-		t.Fatalf("wanted: %d, got: %d", want, got)
+		t.Fatalf("wanted: %s, got: %s", want, got)
 	}
 
 }

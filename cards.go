@@ -82,7 +82,7 @@ func WithNumberOfDecks(number int) Option {
 	}
 }
 
-func NewDeck(opts ...Option) *Deck {
+func NewDeck(random *rand.Rand, opts ...Option) Deck {
 
 	deck := &Deck{
 		count: 1,
@@ -100,20 +100,28 @@ func NewDeck(opts ...Option) *Deck {
 
 		}
 	}
-	return deck
-
-}
-
-func (d *Deck) Shuffle(random *rand.Rand) Deck {
-
-	shuffled_cards := make([]Card, len(d.Cards))
-	perm := random.Perm(len(d.Cards))
+	shuffled_cards := make([]Card, len(deck.Cards))
+	perm := random.Perm(len(deck.Cards))
 
 	for i, j := range perm {
-		shuffled_cards[i] = d.Cards[j]
+		shuffled_cards[i] = deck.Cards[j]
 	}
 	return Deck{
 		Cards: shuffled_cards,
 	}
 
 }
+
+// func (d *Deck) Shuffle(random *rand.Rand) Deck {
+
+// 	shuffled_cards := make([]Card, len(d.Cards))
+// 	perm := random.Perm(len(d.Cards))
+
+// 	for i, j := range perm {
+// 		shuffled_cards[i] = d.Cards[j]
+// 	}
+// 	return Deck{
+// 		Cards: shuffled_cards,
+// 	}
+
+// }

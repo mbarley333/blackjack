@@ -41,11 +41,11 @@ func TestNewBlackjackGame(t *testing.T) {
 
 	g.Start()
 
-	g.DealerStart()
+	//g.DealerStart()
 
 	outcome := g.Outcome()
 
-	got := blackjack.ReportWinner(outcome)
+	got := blackjack.ReportMap[outcome]
 
 	want := "***** Blackjack!  Player wins *****"
 
@@ -78,15 +78,15 @@ func TestDealerBust(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	g.Player.Action = blackjack.Stand
+	g.Player.Action = blackjack.ActionStand
 
 	g.Start()
 
-	g.DealerStart()
+	//g.DealerStart()
 
 	outcome := g.Outcome()
 
-	got := blackjack.ReportWinner(outcome)
+	got := blackjack.ReportMap[outcome]
 
 	want := "***** Player wins! *****"
 
@@ -119,12 +119,12 @@ func TestPlayerBust(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	g.Player.Action = blackjack.Hit
+	g.Player.Action = blackjack.ActionHit
 	g.Start()
 
 	outcome := g.Outcome()
 
-	got := blackjack.ReportWinner(outcome)
+	got := blackjack.ReportMap[outcome]
 
 	want := "***** Bust!  Player loses *****"
 

@@ -1,4 +1,4 @@
-package card
+package cards
 
 import (
 	"fmt"
@@ -38,8 +38,8 @@ const (
 var ranks = []Rank{Ace, Two, Three, Four, Five, Six, Seven, Eight, Nine, Ten, Jack, Queen, King}
 
 type Card struct {
-	Suit
 	Rank
+	Suit
 }
 
 func (c Card) String() string {
@@ -92,11 +92,13 @@ func NewDeck(opts ...Option) *Deck {
 		o(deck)
 	}
 
-	for _, suit := range suits {
-		for _, rank := range ranks {
-			deck.Cards = append(deck.Cards, Card{Suit: suit, Rank: rank})
-		}
+	for i := 0; i < deck.count; i++ {
+		for _, suit := range suits {
+			for _, rank := range ranks {
+				deck.Cards = append(deck.Cards, Card{Suit: suit, Rank: rank})
+			}
 
+		}
 	}
 	return deck
 
@@ -113,18 +115,5 @@ func (d *Deck) Shuffle(random *rand.Rand) Deck {
 	return Deck{
 		Cards: shuffled_cards,
 	}
-
-}
-
-func (d *Deck) Deal(numberCards int) ([]Card, error) {
-	var card Card
-	var cards []Card
-
-	for i := 0; i < numberCards; i++ {
-		card, d.Cards = d.Cards[0], d.Cards[1:]
-		cards = append(cards, card)
-
-	}
-	return cards, nil
 
 }

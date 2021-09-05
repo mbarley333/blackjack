@@ -1,7 +1,8 @@
-package card_test
+package aceornothing_test
 
 import (
-	"card"
+	"cards"
+	"cards/aceornothing"
 	"testing"
 )
 
@@ -9,13 +10,13 @@ func TestEvaluateAceOrNothing(t *testing.T) {
 
 	t.Parallel()
 
-	aceHand := []card.Card{
+	aceHand := []cards.Card{
 		{
-			Suit: card.Spade,
-			Rank: card.Ace,
+			Suit: cards.Spade,
+			Rank: cards.Ace,
 		},
 	}
-	result, err := card.EvaluateAceOrNothing(aceHand)
+	result, err := aceornothing.EvaluateAceOrNothing(aceHand)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -24,13 +25,13 @@ func TestEvaluateAceOrNothing(t *testing.T) {
 		t.Fatalf("wanted: Ace of Spades: WIN, got:%s", result)
 	}
 
-	notAceHand := []card.Card{
+	notAceHand := []cards.Card{
 		{
-			Suit: card.Spade,
-			Rank: card.Jack,
+			Suit: cards.Spade,
+			Rank: cards.Jack,
 		},
 	}
-	result, err = card.EvaluateAceOrNothing(notAceHand)
+	result, err = aceornothing.EvaluateAceOrNothing(notAceHand)
 	if err != nil {
 		t.Fatal(err)
 	}

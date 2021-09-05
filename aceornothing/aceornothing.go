@@ -3,39 +3,62 @@ package aceornothing
 import (
 	"cards"
 	"fmt"
-	"math/rand"
 	"strings"
-	"time"
 )
 
-func EvaluateAceOrNothing(hand []cards.Card) (string, error) {
-
-	if hand[0].Rank == cards.Ace {
-		result := hand[0].String() + ": WIN"
-		return result, nil
-	}
-	result := hand[0].String() + ": LOSE"
-
-	return result, nil
+type Hand struct {
+	Cards []cards.Card
 }
 
-func NewAceOrNothing() {
+func (h *Hand) Deal(deck *cards.Deck) {
+	var card cards.Card
+
+	card, deck.Cards = deck.Cards[0], deck.Cards[1:]
+	deck.Cards = append(deck.Cards, card)
+
+	h.Cards = append(h.Cards, card)
+}
+
+type Game struct {
+	Hand Hand
+	Shoe cards.Deck
+}
+type Option func(*Game) error
+
+func WithCustomDeck(deck cards.Deck) Option {
+	return func(g *Game) error {
+		g.Shoe = deck
+		return nil
+	}
+}
+
+func NewGame(opts ...Option) *Game {
+
 	deck := cards.NewDeck(
 		cards.WithNumberOfDecks(3),
 	)
-	random := rand.New(rand.NewSource(time.Now().UnixNano()))
-	shuffledDeck := deck.Shuffle(random)
 
+	game := &Game{
+		Shoe: deck,
+	}
+
+	for _, o := range opts {
+		o(game)
+	}
+
+	return game
+
+}
+
+func (g *Game) Start() {
 	var response string
 	for {
 		fmt.Println("Would you like to play Ace Or Nothing? Please enter (Y)es or (N)o):")
 		fmt.Scanln(&response)
 		if strings.ToLower(response) == "y" {
-			hand, err := shuffledDeck.Deal(1)
-			if err != nil {
-				fmt.Printf("unable to deal card, %s", err)
-			}
-			result, err := EvaluateAceOrNothing(hand)
+			g.Hand.Deal(&g.Shoe)
+
+			result, err := g.Evaluate()
 			if err != nil {
 				fmt.Printf("unable to evaluate hand,%s", err)
 			}
@@ -46,5 +69,15 @@ func NewAceOrNothing() {
 
 		}
 	}
+}
 
+func (g Game) Evaluate() (string, error) {
+
+	if g.Hand.Cards[0].Rank == cards.Ace {
+		result := g.Hand.Cards[0].String() + ": WIN"
+		return result, nil
+	}
+	result := g.Hand.Cards[0].String() + ": LOSE"
+
+	return result, nil
 }

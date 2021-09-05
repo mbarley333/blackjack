@@ -3,6 +3,7 @@ package cards
 import (
 	"fmt"
 	"math/rand"
+	"time"
 )
 
 type Suit int
@@ -69,8 +70,9 @@ func (c Card) String() string {
 }
 
 type Deck struct {
-	Cards []Card
-	count int
+	Cards  []Card
+	count  int
+	random *rand.Rand
 }
 
 type Option func(*Deck) error
@@ -82,10 +84,18 @@ func WithNumberOfDecks(number int) Option {
 	}
 }
 
-func NewDeck(random *rand.Rand, opts ...Option) Deck {
+func WithRandom(random *rand.Rand) Option {
+	return func(d *Deck) error {
+		d.random = random
+		return nil
+	}
+}
+
+func NewDeck(opts ...Option) Deck {
 
 	deck := &Deck{
-		count: 1,
+		count:  1,
+		random: rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
 
 	for _, o := range opts {
@@ -101,27 +111,14 @@ func NewDeck(random *rand.Rand, opts ...Option) Deck {
 		}
 	}
 	shuffled_cards := make([]Card, len(deck.Cards))
-	perm := random.Perm(len(deck.Cards))
+	perm := deck.random.Perm(len(deck.Cards))
 
 	for i, j := range perm {
 		shuffled_cards[i] = deck.Cards[j]
 	}
+	deck.Cards = shuffled_cards
 	return Deck{
 		Cards: shuffled_cards,
 	}
 
 }
-
-// func (d *Deck) Shuffle(random *rand.Rand) Deck {
-
-// 	shuffled_cards := make([]Card, len(d.Cards))
-// 	perm := random.Perm(len(d.Cards))
-
-// 	for i, j := range perm {
-// 		shuffled_cards[i] = d.Cards[j]
-// 	}
-// 	return Deck{
-// 		Cards: shuffled_cards,
-// 	}
-
-// }

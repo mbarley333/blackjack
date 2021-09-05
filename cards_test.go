@@ -10,8 +10,9 @@ func TestShuffle(t *testing.T) {
 	t.Parallel()
 	random := rand.New(rand.NewSource(1))
 
-	deck := cards.NewDeck(random,
+	deck := cards.NewDeck(
 		cards.WithNumberOfDecks(1),
+		cards.WithRandom(random),
 	)
 
 	//shuffle := deck.Shuffle(random)

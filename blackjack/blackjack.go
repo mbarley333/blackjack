@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math/rand"
 	"strings"
-	"time"
 )
 
 type Action int
@@ -47,6 +46,7 @@ type Game struct {
 	Player Player
 	Dealer Player
 	Shoe   cards.Deck
+	Random rand.Rand
 }
 
 type Option func(*Game) error
@@ -60,8 +60,7 @@ func WithCustomDeck(deck cards.Deck) Option {
 
 func NewBlackjackGame(opts ...Option) (*Game, error) {
 
-	random := rand.New(rand.NewSource(time.Now().UnixNano()))
-	deck := cards.NewDeck(random,
+	deck := cards.NewDeck(
 		cards.WithNumberOfDecks(3),
 	)
 
@@ -86,7 +85,7 @@ func (g *Game) RunCLI() {
 		g.Start()
 		outcome := g.Outcome()
 		fmt.Println(ReportMap[outcome])
-	
+
 	}
 
 }

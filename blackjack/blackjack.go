@@ -160,16 +160,13 @@ func (g *Game) Start() {
 		fmt.Println("****** FINAL ROUND ******")
 
 		for g.Dealer.Score() <= 16 || (g.Dealer.Score() == 17 && g.Dealer.MinScore() != 17) {
-
 			g.Dealer.Hand.Deal(&g.Shoe)
-
-			fmt.Println("Dealer has " + g.Dealer.String())
-			fmt.Println("Player has " + g.Player.String())
-			fmt.Println("")
-
 		}
 		g.Dealer.Action = ActionStand
 	}
+	fmt.Println("Dealer has " + g.Dealer.String())
+	fmt.Println("Player has " + g.Player.String())
+	fmt.Println("")
 
 	g.Outcome()
 	fmt.Println(ReportMap[g.Player.HandOutcome])

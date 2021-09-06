@@ -8,6 +8,7 @@ import (
 func main() {
 	g, err := blackjack.NewBlackjackGame(
 		blackjack.WithAiType(blackjack.AiStandOnly),
+		blackjack.WithAiHandsToPlay(3),
 	)
 	if err != nil {
 		log.Fatal(err)

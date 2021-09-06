@@ -113,11 +113,11 @@ func (g *Game) RunCLI() {
 		g.Player.Action = None
 		g.Player.HandOutcome = OutcomeNone
 		g.Start()
-		fmt.Println("")
-		fmt.Println("***** Player Report *****")
-		fmt.Println(g.GetPlayerReport())
 
 	}
+	fmt.Println("")
+	fmt.Println("***** Player Report *****")
+	fmt.Println(g.GetPlayerReport())
 
 }
 

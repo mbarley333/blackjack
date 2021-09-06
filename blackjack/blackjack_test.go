@@ -127,3 +127,40 @@ func TestPlayerBust(t *testing.T) {
 	}
 
 }
+
+func TestOnlyStandAI(t *testing.T) {
+	// reuse the blackjack machinery
+	// insert the ai logic into the flow of game
+
+	stack := []cards.Card{
+		{Rank: cards.Ace, Suit: cards.Club},
+		{Rank: cards.Eight, Suit: cards.Club},
+		{Rank: cards.Six, Suit: cards.Club},
+		{Rank: cards.Seven, Suit: cards.Club},
+		{Rank: cards.Ten, Suit: cards.Club},
+		{Rank: cards.King, Suit: cards.Club},
+	}
+
+	deck := cards.Deck{
+		Cards: stack,
+	}
+
+	g, err := blackjack.NewBlackjackGame(
+		blackjack.WithCustomDeck(deck),
+		blackjack.WithAiType(blackjack.AiStandOnly),
+	)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	g.Start()
+
+	got := g.Player.Action
+	want := blackjack.ActionStand
+
+	if want != got {
+		t.Fatalf("want: %d, got: %d", want, got)
+	}
+
+}

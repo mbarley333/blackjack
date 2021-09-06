@@ -42,11 +42,19 @@ var ReportMap = map[Outcome]string{
 	OutcomeBust:      "***** Bust!  Player loses *****",
 }
 
+type Ai int
+
+const (
+	AiNone Ai = iota
+	AiStandOnly
+)
+
 type Game struct {
-	Player Player
-	Dealer Player
-	Shoe   cards.Deck
-	Random rand.Rand
+	Player          Player
+	Dealer          Player
+	Shoe            cards.Deck
+	Random          rand.Rand
+	GetPlayerAction func() Action
 }
 
 type Option func(*Game) error
@@ -58,6 +66,15 @@ func WithCustomDeck(deck cards.Deck) Option {
 	}
 }
 
+func WithAiType(ai Ai) Option {
+	return func(g *Game) error {
+		if ai == AiStandOnly {
+			g.GetPlayerAction = GetAiActionStandOnly
+		}
+		return nil
+	}
+}
+
 func NewBlackjackGame(opts ...Option) (*Game, error) {
 
 	deck := cards.NewDeck(
@@ -65,7 +82,8 @@ func NewBlackjackGame(opts ...Option) (*Game, error) {
 	)
 
 	game := &Game{
-		Shoe: deck,
+		Shoe:            deck,
+		GetPlayerAction: GetPlayerAction,
 	}
 
 	for _, o := range opts {
@@ -145,17 +163,20 @@ func (g *Game) Start() {
 func (g *Game) SetPlayerAction() {
 
 	if g.Player.Action == None {
-		answer := GetPlayerAction()
-		g.Player.Action = ActionMap[strings.ToLower(answer)]
+		g.Player.Action = g.GetPlayerAction()
 	}
 }
 
-func GetPlayerAction() string {
+func GetPlayerAction() Action {
 
 	var answer string
 	fmt.Println("Please choose (H)it, (S)tand or (Q)uit")
 	fmt.Scanf("%s\n", &answer)
-	return answer
+	return ActionMap[strings.ToLower(answer)]
+}
+
+func GetAiActionStandOnly() Action {
+	return ActionStand
 }
 
 func (g *Game) Outcome() Outcome {

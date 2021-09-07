@@ -10,13 +10,20 @@ func TestEvaluateAceOrNothing(t *testing.T) {
 
 	t.Parallel()
 
-	aceHand := []cards.Card{
-		{
-			Suit: cards.Spade,
-			Rank: cards.Ace,
+	deck := cards.Deck{
+		Cards: []cards.Card{
+			{Suit: cards.Spade, Rank: cards.Ace},
+			{Suit: cards.Spade, Rank: cards.Five},
 		},
 	}
-	result, err := aceornothing.EvaluateAceOrNothing(aceHand)
+
+	g := aceornothing.NewGame(
+		aceornothing.WithCustomDeck(deck),
+	)
+
+	g.Hand.Deal(&g.Shoe)
+
+	result, err := g.Evaluate()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -25,18 +32,16 @@ func TestEvaluateAceOrNothing(t *testing.T) {
 		t.Fatalf("wanted: Ace of Spades: WIN, got:%s", result)
 	}
 
-	notAceHand := []cards.Card{
-		{
-			Suit: cards.Spade,
-			Rank: cards.Jack,
-		},
-	}
-	result, err = aceornothing.EvaluateAceOrNothing(notAceHand)
+	g.Hand = aceornothing.Hand{}
+
+	g.Hand.Deal(&g.Shoe)
+
+	result, err = g.Evaluate()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if result != "Jack of Spades: LOSE" {
+	if result != "Five of Spades: LOSE" {
 		t.Fatalf("wanted: LOSE, got:%s", result)
 	}
 

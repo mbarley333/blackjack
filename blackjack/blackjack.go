@@ -3,9 +3,10 @@ package blackjack
 import (
 	"cards"
 	"fmt"
+	"io"
 	"math/rand"
+	"os"
 	"strings"
-	"time"
 )
 
 type Action int
@@ -43,10 +44,25 @@ var ReportMap = map[Outcome]string{
 	OutcomeBust:      "***** Bust!  Player loses *****",
 }
 
+type Ai int
+
+const (
+	AiNone Ai = iota
+	AiStandOnly
+)
+
 type Game struct {
-	Player Player
-	Dealer Player
-	Shoe   cards.Deck
+	Player          Player
+	Dealer          Player
+	Shoe            cards.Deck
+	Random          rand.Rand
+	GetPlayerAction func() Action
+	AiHandsToPlay   int
+	HandsPlayed     int
+	PlayerWin       int
+	PlayerLose      int
+	PlayerTie       int
+	output          io.Writer
 }
 
 type Option func(*Game) error
@@ -58,15 +74,32 @@ func WithCustomDeck(deck cards.Deck) Option {
 	}
 }
 
+func WithAiType(ai Ai) Option {
+	return func(g *Game) error {
+		if ai == AiStandOnly {
+			g.GetPlayerAction = GetAiActionStandOnly
+		}
+		return nil
+	}
+}
+
+func WithAiHandsToPlay(number int) Option {
+	return func(g *Game) error {
+		g.AiHandsToPlay = number
+		return nil
+	}
+}
+
 func NewBlackjackGame(opts ...Option) (*Game, error) {
 
-	random := rand.New(rand.NewSource(time.Now().UnixNano()))
-	deck := cards.NewDeck(random,
+	deck := cards.NewDeck(
 		cards.WithNumberOfDecks(3),
 	)
 
 	game := &Game{
-		Shoe: deck,
+		Shoe:            deck,
+		GetPlayerAction: GetPlayerAction,
+		output:          os.Stdout,
 	}
 
 	for _, o := range opts {
@@ -84,25 +117,28 @@ func (g *Game) RunCLI() {
 		g.Player.Action = None
 		g.Player.HandOutcome = OutcomeNone
 		g.Start()
-		outcome := g.Outcome()
-		fmt.Println(ReportMap[outcome])
-	
+
 	}
+
+	fmt.Fprintln(g.output, "")
+	fmt.Fprintln(g.output, "***** Player Report *****")
+	fmt.Fprintln(g.output, g.GetPlayerReport())
 
 }
 
 func (g *Game) Start() {
 
-	fmt.Println("")
-	fmt.Println("****** NEW GAME ******")
+	fmt.Fprintln(g.output, "")
+	fmt.Fprintln(g.output, "****** NEW GAME ******")
 
+	// was this the intent
 	g.Player.Hand.Deal(&g.Shoe)
 	g.Dealer.Hand.Deal(&g.Shoe)
 	g.Player.Hand.Deal(&g.Shoe)
 	g.Dealer.Hand.Deal(&g.Shoe)
 
-	fmt.Println(g.Dealer.DealerString())
-	fmt.Println("Player has " + g.Player.String())
+	fmt.Fprintln(g.output, g.Dealer.DealerString())
+	fmt.Fprintln(g.output, "Player has "+g.Player.String())
 
 	if g.Player.Score() == 21 {
 		g.Player.HandOutcome = OutcomeBlackjack
@@ -112,12 +148,17 @@ func (g *Game) Start() {
 
 		g.SetPlayerAction()
 
+		// question here
+		if g.Player.Action == ActionQuit {
+			break
+		}
+
 		if g.Player.Action == ActionHit {
 
 			g.Player.Hand.Deal(&g.Shoe)
 			g.Player.Action = None
 
-			fmt.Println("Player has " + g.Player.String())
+			fmt.Fprintln(g.output, "Player has "+g.Player.String())
 			if g.Player.Score() > 21 {
 				g.Player.HandOutcome = OutcomeBust
 			}
@@ -125,41 +166,31 @@ func (g *Game) Start() {
 		}
 	}
 
-	if g.Player.HandOutcome <= OutcomeBlackjack && g.Player.HandOutcome <= OutcomeBust {
-		fmt.Println("")
-		fmt.Println("****** FINAL ROUND ******")
+	// question
+	if g.Player.Action != ActionQuit {
+		if g.Player.HandOutcome <= OutcomeBlackjack && g.Player.HandOutcome <= OutcomeBust {
+			fmt.Fprintln(g.output, "")
+			fmt.Fprintln(g.output, "****** FINAL ROUND ******")
 
-		for g.Dealer.Score() <= 16 || (g.Dealer.Score() == 17 && g.Dealer.MinScore() != 17) {
-
-			g.Dealer.Hand.Deal(&g.Shoe)
-
-			fmt.Println("Dealer has " + g.Dealer.String())
-			fmt.Println("Player has " + g.Player.String())
-			fmt.Println("")
-
+			for g.Dealer.Score() <= 16 || (g.Dealer.Score() == 17 && g.Dealer.MinScore() != 17) {
+				g.Dealer.Hand.Deal(&g.Shoe)
+			}
+			g.Dealer.Action = ActionStand
 		}
-		g.Dealer.Action = ActionStand
+		fmt.Fprintln(g.output, "Dealer has "+g.Dealer.String())
+		fmt.Fprintln(g.output, "Player has "+g.Player.String())
+		fmt.Fprintln(g.output, "")
+
+		g.Outcome()
+		fmt.Fprintln(g.output, ReportMap[g.Player.HandOutcome])
+		g.SetPlayerWinLoseTie(g.Player.HandOutcome)
+		g.HandsPlayed += 1
+		g.SetPlayerActionForAiHandsPlayed()
 	}
 
 }
 
-func (g *Game) SetPlayerAction() {
-
-	if g.Player.Action == None {
-		answer := GetPlayerAction()
-		g.Player.Action = ActionMap[strings.ToLower(answer)]
-	}
-}
-
-func GetPlayerAction() string {
-
-	var answer string
-	fmt.Println("Please choose (H)it, (S)tand or (Q)uit")
-	fmt.Scanf("%s\n", &answer)
-	return answer
-}
-
-func (g *Game) Outcome() Outcome {
+func (g *Game) Outcome() {
 
 	var outcome Outcome
 
@@ -173,7 +204,46 @@ func (g *Game) Outcome() Outcome {
 		outcome = OutcomeTie
 	}
 
-	return outcome
+	g.Player.HandOutcome = outcome
+}
+
+func (g *Game) SetPlayerWinLoseTie(outcome Outcome) {
+	if outcome == OutcomeWin || outcome == OutcomeBlackjack {
+		g.PlayerWin += 1
+	} else if outcome == OutcomeTie {
+		g.PlayerTie += 1
+	} else {
+		g.PlayerLose += 1
+	}
+}
+
+func (g *Game) SetPlayerAction() {
+
+	if g.Player.Action == None {
+		g.Player.Action = g.GetPlayerAction()
+	}
+}
+
+func (g *Game) SetPlayerActionForAiHandsPlayed() {
+	if g.HandsPlayed == g.AiHandsToPlay {
+		g.Player.Action = ActionQuit
+	}
+}
+
+func (g *Game) GetPlayerReport() string {
+	return "Player won: " + fmt.Sprint(g.PlayerWin) + ", lost: " + fmt.Sprint(g.PlayerLose) + " and tied: " + fmt.Sprint(g.PlayerTie)
+}
+
+func GetPlayerAction() Action {
+
+	var answer string
+	fmt.Fprintln(os.Stdout, "Please choose (H)it, (S)tand or (Q)uit")
+	fmt.Scanf("%s\n", &answer)
+	return ActionMap[strings.ToLower(answer)]
+}
+
+func GetAiActionStandOnly() Action {
+	return ActionStand
 }
 
 type Hand struct {

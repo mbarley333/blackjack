@@ -6,10 +6,7 @@ import (
 )
 
 func main() {
-	g, err := blackjack.NewBlackjackGame(
-		blackjack.WithAiType(blackjack.AiStandOnly),
-		blackjack.WithAiHandsToPlay(2),
-	)
+	g, err := blackjack.NewBlackjackGame()
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -3,7 +3,9 @@ package blackjack
 import (
 	"cards"
 	"fmt"
+	"io"
 	"math/rand"
+	"os"
 	"strings"
 )
 
@@ -60,6 +62,7 @@ type Game struct {
 	PlayerWin       int
 	PlayerLose      int
 	PlayerTie       int
+	output          io.Writer
 }
 
 type Option func(*Game) error
@@ -96,6 +99,7 @@ func NewBlackjackGame(opts ...Option) (*Game, error) {
 	game := &Game{
 		Shoe:            deck,
 		GetPlayerAction: GetPlayerAction,
+		output:          os.Stdout,
 	}
 
 	for _, o := range opts {
@@ -115,9 +119,10 @@ func (g *Game) RunCLI() {
 		g.Start()
 
 	}
-	fmt.Println("")
-	fmt.Println("***** Player Report *****")
-	fmt.Println(g.GetPlayerReport())
+
+	fmt.Fprintln(g.output, "")
+	fmt.Fprintln(g.output, "***** Player Report *****")
+	fmt.Fprintln(g.output, g.GetPlayerReport())
 
 }
 
@@ -126,6 +131,7 @@ func (g *Game) Start() {
 	fmt.Println("")
 	fmt.Println("****** NEW GAME ******")
 
+	// was this the intent
 	g.Player.Hand.Deal(&g.Shoe)
 	g.Dealer.Hand.Deal(&g.Shoe)
 	g.Player.Hand.Deal(&g.Shoe)
@@ -142,6 +148,11 @@ func (g *Game) Start() {
 
 		g.SetPlayerAction()
 
+		// question here
+		if g.Player.Action == ActionQuit {
+			break
+		}
+
 		if g.Player.Action == ActionHit {
 
 			g.Player.Hand.Deal(&g.Shoe)
@@ -155,24 +166,27 @@ func (g *Game) Start() {
 		}
 	}
 
-	if g.Player.HandOutcome <= OutcomeBlackjack && g.Player.HandOutcome <= OutcomeBust {
-		fmt.Println("")
-		fmt.Println("****** FINAL ROUND ******")
+	// question
+	if g.Player.Action != ActionQuit {
+		if g.Player.HandOutcome <= OutcomeBlackjack && g.Player.HandOutcome <= OutcomeBust {
+			fmt.Println("")
+			fmt.Println("****** FINAL ROUND ******")
 
-		for g.Dealer.Score() <= 16 || (g.Dealer.Score() == 17 && g.Dealer.MinScore() != 17) {
-			g.Dealer.Hand.Deal(&g.Shoe)
+			for g.Dealer.Score() <= 16 || (g.Dealer.Score() == 17 && g.Dealer.MinScore() != 17) {
+				g.Dealer.Hand.Deal(&g.Shoe)
+			}
+			g.Dealer.Action = ActionStand
 		}
-		g.Dealer.Action = ActionStand
-	}
-	fmt.Println("Dealer has " + g.Dealer.String())
-	fmt.Println("Player has " + g.Player.String())
-	fmt.Println("")
+		fmt.Println("Dealer has " + g.Dealer.String())
+		fmt.Println("Player has " + g.Player.String())
+		fmt.Println("")
 
-	g.Outcome()
-	fmt.Println(ReportMap[g.Player.HandOutcome])
-	g.SetPlayerWinLoseTie(g.Player.HandOutcome)
-	g.HandsPlayed += 1
-	g.SetPlayerActionForAiHandsPlayed()
+		g.Outcome()
+		fmt.Println(ReportMap[g.Player.HandOutcome])
+		g.SetPlayerWinLoseTie(g.Player.HandOutcome)
+		g.HandsPlayed += 1
+		g.SetPlayerActionForAiHandsPlayed()
+	}
 
 }
 

@@ -1,9 +1,11 @@
 package blackjack_test
 
 import (
+	"bytes"
 	"cards"
 	"cards/blackjack"
 	"fmt"
+	"strings"
 	"testing"
 )
 
@@ -189,6 +191,53 @@ func TestOnlyStandAI(t *testing.T) {
 
 	if wantReport != gotReport {
 		t.Fatalf("want: %s, got:%s", wantReport, gotReport)
+	}
+
+}
+
+func TestGetPlayerAction(t *testing.T) {
+	output := &bytes.Buffer{}
+	input := strings.NewReader("h")
+	wantPrompt := "Please choose (H)it, (S)tand or (Q)uit\n"
+
+	got := blackjack.GetPlayerAction(output, input)
+	gotPrompt := output.String()
+
+	want := blackjack.ActionHit
+
+	if want != got {
+		t.Fatalf("wanted: %v, got: %v", want, got)
+	}
+
+	if wantPrompt != gotPrompt {
+		t.Fatalf("wanted: %q, got: %q", wantPrompt, gotPrompt)
+	}
+
+}
+
+func TestPlayerSetup(t *testing.T) {
+
+	g, err := blackjack.NewBlackjackGame()
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	output := &bytes.Buffer{}
+	input := strings.NewReader("1")
+
+	want := "Please enter number of Blackjack players:\n"
+	g.PlayerSetup(output, input)
+	got := output.String()
+
+	if want != got {
+		t.Fatalf("wanted: %q, got:%q", want, got)
+	}
+
+	wantPlayers := 2
+	gotPlayers := len(g.Players)
+	if wantPlayers != gotPlayers {
+		t.Fatalf("wanted: %d, got:%d", wantPlayers, gotPlayers)
 	}
 
 }

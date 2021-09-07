@@ -11,6 +11,18 @@ import (
 
 type Action int
 
+var ActionStringMap = map[Action]string{
+	ActionHit:   "Hit",
+	ActionStand: "Stand",
+	ActionQuit:  "Quit",
+	None:        "Invalid Action",
+}
+
+func (a Action) String() string {
+
+	return ActionStringMap[a]
+}
+
 const (
 	None Action = iota
 	ActionStand
@@ -52,17 +64,19 @@ const (
 )
 
 type Game struct {
+	Players         []Player
 	Player          Player
 	Dealer          Player
 	Shoe            cards.Deck
 	Random          rand.Rand
-	GetPlayerAction func() Action
+	GetPlayerAction func(io.Writer, io.Reader) Action
 	AiHandsToPlay   int
 	HandsPlayed     int
 	PlayerWin       int
 	PlayerLose      int
 	PlayerTie       int
-	output          io.Writer
+	Output          io.Writer
+	input           io.Reader
 }
 
 type Option func(*Game) error
@@ -96,10 +110,12 @@ func NewBlackjackGame(opts ...Option) (*Game, error) {
 		cards.WithNumberOfDecks(3),
 	)
 
+	// func opt for input
 	game := &Game{
 		Shoe:            deck,
 		GetPlayerAction: GetPlayerAction,
-		output:          os.Stdout,
+		Output:          os.Stdout,
+		input:           os.Stdin,
 	}
 
 	for _, o := range opts {
@@ -107,6 +123,21 @@ func NewBlackjackGame(opts ...Option) (*Game, error) {
 	}
 
 	return game, nil
+}
+
+func (g *Game) PlayerSetup(output io.Writer, input io.Reader) {
+
+	var answer int
+
+	for answer < 1 {
+		fmt.Fprintln(output, "Please enter number of Blackjack players:")
+		fmt.Fscanln(input, &answer)
+
+		for i := 0; i <= answer; i++ {
+			g.Players = append(g.Players, Player{})
+		}
+	}
+
 }
 
 func (g *Game) RunCLI() {
@@ -120,35 +151,37 @@ func (g *Game) RunCLI() {
 
 	}
 
-	fmt.Fprintln(g.output, "")
-	fmt.Fprintln(g.output, "***** Player Report *****")
-	fmt.Fprintln(g.output, g.GetPlayerReport())
+	fmt.Fprintln(g.Output, "")
+	fmt.Fprintln(g.Output, "***** Player Report *****")
+	fmt.Fprintln(g.Output, g.GetPlayerReport())
 
 }
 
 func (g *Game) Start() {
 
-	fmt.Fprintln(g.output, "")
-	fmt.Fprintln(g.output, "****** NEW GAME ******")
+	fmt.Fprintln(g.Output, "")
+	fmt.Fprintln(g.Output, "****** NEW GAME ******")
 
-	// was this the intent
+	// !!! was this the intent
 	g.Player.Hand.Deal(&g.Shoe)
 	g.Dealer.Hand.Deal(&g.Shoe)
 	g.Player.Hand.Deal(&g.Shoe)
 	g.Dealer.Hand.Deal(&g.Shoe)
 
-	fmt.Fprintln(g.output, g.Dealer.DealerString())
-	fmt.Fprintln(g.output, "Player has "+g.Player.String())
+	fmt.Fprintln(g.Output, g.Dealer.DealerString())
+	fmt.Fprintln(g.Output, "Player has "+g.Player.String())
 
 	if g.Player.Score() == 21 {
 		g.Player.HandOutcome = OutcomeBlackjack
 	}
 
+	// !!! a lot of status type logic
+	//
 	for g.Player.HandOutcome != OutcomeBlackjack && g.Player.HandOutcome != OutcomeBust && g.Player.Action != ActionStand {
 
 		g.SetPlayerAction()
 
-		// question here
+		// !!! not sure if break is a good design
 		if g.Player.Action == ActionQuit {
 			break
 		}
@@ -158,7 +191,7 @@ func (g *Game) Start() {
 			g.Player.Hand.Deal(&g.Shoe)
 			g.Player.Action = None
 
-			fmt.Fprintln(g.output, "Player has "+g.Player.String())
+			fmt.Fprintln(g.Output, "Player has "+g.Player.String())
 			if g.Player.Score() > 21 {
 				g.Player.HandOutcome = OutcomeBust
 			}
@@ -166,23 +199,23 @@ func (g *Game) Start() {
 		}
 	}
 
-	// question
+	// more status logic
 	if g.Player.Action != ActionQuit {
 		if g.Player.HandOutcome <= OutcomeBlackjack && g.Player.HandOutcome <= OutcomeBust {
-			fmt.Fprintln(g.output, "")
-			fmt.Fprintln(g.output, "****** FINAL ROUND ******")
+			fmt.Fprintln(g.Output, "")
+			fmt.Fprintln(g.Output, "****** FINAL ROUND ******")
 
 			for g.Dealer.Score() <= 16 || (g.Dealer.Score() == 17 && g.Dealer.MinScore() != 17) {
 				g.Dealer.Hand.Deal(&g.Shoe)
 			}
 			g.Dealer.Action = ActionStand
 		}
-		fmt.Fprintln(g.output, "Dealer has "+g.Dealer.String())
-		fmt.Fprintln(g.output, "Player has "+g.Player.String())
-		fmt.Fprintln(g.output, "")
+		fmt.Fprintln(g.Output, "Dealer has "+g.Dealer.String())
+		fmt.Fprintln(g.Output, "Player has "+g.Player.String())
+		fmt.Fprintln(g.Output, "")
 
 		g.Outcome()
-		fmt.Fprintln(g.output, ReportMap[g.Player.HandOutcome])
+		fmt.Fprintln(g.Output, ReportMap[g.Player.HandOutcome])
 		g.SetPlayerWinLoseTie(g.Player.HandOutcome)
 		g.HandsPlayed += 1
 		g.SetPlayerActionForAiHandsPlayed()
@@ -194,7 +227,9 @@ func (g *Game) Outcome() {
 
 	var outcome Outcome
 
-	if g.Dealer.Score() > 21 {
+	if g.Player.HandOutcome == OutcomeBlackjack || g.Player.HandOutcome == OutcomeBust {
+		outcome = g.Player.HandOutcome
+	} else if g.Dealer.Score() > 21 {
 		outcome = OutcomeWin
 	} else if g.Player.Score() > g.Dealer.Score() {
 		outcome = OutcomeWin
@@ -220,7 +255,7 @@ func (g *Game) SetPlayerWinLoseTie(outcome Outcome) {
 func (g *Game) SetPlayerAction() {
 
 	if g.Player.Action == None {
-		g.Player.Action = g.GetPlayerAction()
+		g.Player.Action = g.GetPlayerAction(g.Output, g.input)
 	}
 }
 
@@ -234,15 +269,16 @@ func (g *Game) GetPlayerReport() string {
 	return "Player won: " + fmt.Sprint(g.PlayerWin) + ", lost: " + fmt.Sprint(g.PlayerLose) + " and tied: " + fmt.Sprint(g.PlayerTie)
 }
 
-func GetPlayerAction() Action {
+func GetPlayerAction(output io.Writer, input io.Reader) Action {
 
 	var answer string
-	fmt.Fprintln(os.Stdout, "Please choose (H)it, (S)tand or (Q)uit")
-	fmt.Scanf("%s\n", &answer)
+	fmt.Fprintln(output, "Please choose (H)it, (S)tand or (Q)uit")
+	fmt.Fscanln(input, &answer)
+
 	return ActionMap[strings.ToLower(answer)]
 }
 
-func GetAiActionStandOnly() Action {
+func GetAiActionStandOnly(io.Writer, io.Reader) Action {
 	return ActionStand
 }
 
@@ -250,6 +286,7 @@ type Hand struct {
 	Cards []cards.Card
 }
 
+// put on deal on player struct
 func (h *Hand) Deal(shoe *cards.Deck) {
 	var card cards.Card
 
@@ -261,9 +298,10 @@ func (h *Hand) Deal(shoe *cards.Deck) {
 }
 
 type Player struct {
-	Hand        Hand
-	Action      Action
-	HandOutcome Outcome
+	Hand            Hand
+	Action          Action
+	HandOutcome     Outcome
+	GetPlayerAction func(io.Writer, io.Reader) Action
 }
 
 func (p Player) String() string {
@@ -278,7 +316,6 @@ func (p Player) String() string {
 func (p Player) DealerString() string {
 
 	return "Dealer has: [" + p.Hand.Cards[0].String() + "]" + "[???]"
-
 }
 
 func (p Player) Score() int {
@@ -309,3 +346,15 @@ func min(a, b int) int {
 	}
 	return b
 }
+
+// additional features
+// difficult to fake concreate...take interface instead
+// burn cards
+// 4. basic strategy ai
+// 3. reshuffle
+// 2. betting - push outcome...just bet $10, handle no money player and dealer
+// 1. multi players
+// multi hands for split
+
+// fold
+// card counter

@@ -12,19 +12,36 @@ type Action int
 
 const (
 	None Action = iota
-	Stand
-	Hit
+	ActionStand
+	ActionHit
+	ActionQuit
 )
+
+var ActionMap = map[string]Action{
+	"h": ActionHit,
+	"s": ActionStand,
+	"q": ActionQuit,
+	"n": None,
+}
 
 type Outcome int
 
 const (
-	PlayerBlackjack Outcome = iota
-	PlayerWin
-	PlayerLose
-	PlayerTie
-	PlayerBust
+	OutcomeNone Outcome = iota
+	OutcomeBlackjack
+	OutcomeWin
+	OutcomeLose
+	OutcomeTie
+	OutcomeBust
 )
+
+var ReportMap = map[Outcome]string{
+	OutcomeBlackjack: "***** Blackjack!  Player wins *****",
+	OutcomeWin:       "***** Player wins! *****",
+	OutcomeLose:      "***** Player loses *****",
+	OutcomeTie:       "***** Player and Dealer tie *****",
+	OutcomeBust:      "***** Bust!  Player loses *****",
+}
 
 type Game struct {
 	Player Player
@@ -42,44 +59,36 @@ func WithCustomDeck(deck cards.Deck) Option {
 }
 
 func NewBlackjackGame(opts ...Option) (*Game, error) {
-	deck := cards.NewDeck(
-		cards.WithNumberOfDecks(1),
-	)
+
 	random := rand.New(rand.NewSource(time.Now().UnixNano()))
+	deck := cards.NewDeck(random,
+		cards.WithNumberOfDecks(3),
+	)
 
 	game := &Game{
-		Shoe: deck.Shuffle(random),
+		Shoe: deck,
 	}
 
 	for _, o := range opts {
 		o(game)
 	}
 
-	fmt.Println(game.Shoe.Cards)
 	return game, nil
-}
-
-func (g *Game) Deal() cards.Card {
-	var card cards.Card
-
-	card, g.Shoe.Cards = g.Shoe.Cards[0], g.Shoe.Cards[1:]
-	g.Shoe.Cards = append(g.Shoe.Cards, card)
-
-	return card
-
 }
 
 func (g *Game) RunCLI() {
 
-	for {
-		g.Player.Hand = []cards.Card{}
-		g.Dealer.Hand = []cards.Card{}
+	for g.Player.Action != ActionQuit {
+		g.Player.Hand.Cards = []cards.Card{}
+		g.Dealer.Hand.Cards = []cards.Card{}
 		g.Player.Action = None
+		g.Player.HandOutcome = OutcomeNone
 		g.Start()
-		g.DealerStart()
 		outcome := g.Outcome()
-		fmt.Println(ReportWinner(outcome))
+		fmt.Println(ReportMap[outcome])
+	
 	}
+
 }
 
 func (g *Game) Start() {
@@ -87,123 +96,119 @@ func (g *Game) Start() {
 	fmt.Println("")
 	fmt.Println("****** NEW GAME ******")
 
-	g.Player.GetCard(g.Deal())
-	g.Dealer.GetCard(g.Deal())
-	g.Player.GetCard(g.Deal())
-	g.Dealer.GetCard(g.Deal())
+	g.Player.Hand.Deal(&g.Shoe)
+	g.Dealer.Hand.Deal(&g.Shoe)
+	g.Player.Hand.Deal(&g.Shoe)
+	g.Dealer.Hand.Deal(&g.Shoe)
 
 	fmt.Println(g.Dealer.DealerString())
 	fmt.Println("Player has " + g.Player.String())
 
 	if g.Player.Score() == 21 {
-		g.Player.Action = Stand
+		g.Player.HandOutcome = OutcomeBlackjack
 	}
 
-	for g.Player.Action != Stand {
+	for g.Player.HandOutcome != OutcomeBlackjack && g.Player.HandOutcome != OutcomeBust && g.Player.Action != ActionStand {
 
 		g.SetPlayerAction()
 
-		if g.Player.Action == Hit {
-			g.Player.GetCard(g.Deal())
+		if g.Player.Action == ActionHit {
+
+			g.Player.Hand.Deal(&g.Shoe)
 			g.Player.Action = None
 
-			fmt.Println(g.Player.String())
+			fmt.Println("Player has " + g.Player.String())
 			if g.Player.Score() > 21 {
-				g.Player.Action = Stand
-				g.Outcome()
+				g.Player.HandOutcome = OutcomeBust
 			}
 
 		}
 	}
 
-}
-
-func (g *Game) DealerStart() {
-
-	fmt.Println("")
-	fmt.Println("****** FINAL ROUND ******")
-
-	for g.Dealer.Score() <= 16 || (g.Dealer.Score() == 17 && g.Dealer.MinScore() != 17) {
-
-		g.Dealer.GetCard(g.Deal())
-
-		fmt.Println("Dealer has " + g.Dealer.String())
-		fmt.Println("Player has " + g.Player.String())
+	if g.Player.HandOutcome <= OutcomeBlackjack && g.Player.HandOutcome <= OutcomeBust {
 		fmt.Println("")
+		fmt.Println("****** FINAL ROUND ******")
 
+		for g.Dealer.Score() <= 16 || (g.Dealer.Score() == 17 && g.Dealer.MinScore() != 17) {
+
+			g.Dealer.Hand.Deal(&g.Shoe)
+
+			fmt.Println("Dealer has " + g.Dealer.String())
+			fmt.Println("Player has " + g.Player.String())
+			fmt.Println("")
+
+		}
+		g.Dealer.Action = ActionStand
 	}
-	g.Dealer.Action = Stand
+
 }
 
 func (g *Game) SetPlayerAction() {
 
-	var answer string
-
 	if g.Player.Action == None {
-		fmt.Println("Please choose (H)it or (S)tand")
-		fmt.Scanf("%s\n", &answer)
-
-		if strings.ToLower(answer) == "h" {
-			g.Player.Action = Hit
-		} else {
-			g.Player.Action = Stand
-		}
-
+		answer := GetPlayerAction()
+		g.Player.Action = ActionMap[strings.ToLower(answer)]
 	}
+}
 
+func GetPlayerAction() string {
+
+	var answer string
+	fmt.Println("Please choose (H)it, (S)tand or (Q)uit")
+	fmt.Scanf("%s\n", &answer)
+	return answer
 }
 
 func (g *Game) Outcome() Outcome {
 
-	if g.Player.Score() == 21 && len(g.Player.Hand) == 2 {
-		return PlayerBlackjack
-	} else if g.Dealer.Score() > 21 {
-		return PlayerWin
-	} else if g.Player.Score() > 21 {
-		return PlayerBust
+	var outcome Outcome
+
+	if g.Dealer.Score() > 21 {
+		outcome = OutcomeWin
 	} else if g.Player.Score() > g.Dealer.Score() {
-		return PlayerWin
+		outcome = OutcomeWin
 	} else if g.Player.Score() < g.Dealer.Score() {
-		return PlayerLose
+		outcome = OutcomeLose
 	} else {
-		return PlayerTie
+		outcome = OutcomeTie
 	}
 
+	return outcome
 }
 
-func ReportWinner(outcome Outcome) string {
-	reportMap := make(map[Outcome]string)
-	reportMap[PlayerBlackjack] = "Blackjack!  Player wins"
-	reportMap[PlayerWin] = "Player wins!"
-	reportMap[PlayerLose] = "Player loses"
-	reportMap[PlayerTie] = "Player and Dealer tie"
-	reportMap[PlayerBust] = "Bust!  Player loses"
+type Hand struct {
+	Cards []cards.Card
+}
 
-	return "***** " + reportMap[outcome] + " *****"
+func (h *Hand) Deal(shoe *cards.Deck) {
+	var card cards.Card
+
+	card, shoe.Cards = shoe.Cards[0], shoe.Cards[1:]
+	shoe.Cards = append(shoe.Cards, card)
+
+	h.Cards = append(h.Cards, card)
+
 }
 
 type Player struct {
-	Hand   []cards.Card
-	Action Action
+	Hand        Hand
+	Action      Action
+	HandOutcome Outcome
 }
 
 func (p Player) String() string {
 
-	var showCards string
-	for _, card := range p.Hand {
-		showCards = showCards + "[" + card.String() + "]"
+	builder := strings.Builder{}
+	for _, card := range p.Hand.Cards {
+		builder.WriteString("[" + card.String() + "]")
 	}
-	return fmt.Sprint(p.Score()) + ": " + showCards
+	return fmt.Sprint(p.Score()) + ": " + builder.String()
 }
 
 func (p Player) DealerString() string {
 
-	return "Dealer has: [" + p.Hand[0].String() + "]" + "[???]"
+	return "Dealer has: [" + p.Hand.Cards[0].String() + "]" + "[???]"
 
-}
-
-func (p *Player) GetCard(card cards.Card) {
-	p.Hand = append(p.Hand, card)
 }
 
 func (p Player) Score() int {
@@ -212,7 +217,7 @@ func (p Player) Score() int {
 	if minScore > 11 {
 		return minScore
 	}
-	for _, c := range p.Hand {
+	for _, c := range p.Hand.Cards {
 		if c.Rank == cards.Ace {
 			return minScore + 10
 		}
@@ -222,7 +227,7 @@ func (p Player) Score() int {
 
 func (p Player) MinScore() int {
 	score := 0
-	for _, c := range p.Hand {
+	for _, c := range p.Hand.Cards {
 		score += min(int(c.Rank), 10)
 	}
 	return score

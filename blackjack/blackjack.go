@@ -128,8 +128,8 @@ func (g *Game) RunCLI() {
 
 func (g *Game) Start() {
 
-	fmt.Println("")
-	fmt.Println("****** NEW GAME ******")
+	fmt.Fprintln(g.output, "")
+	fmt.Fprintln(g.output, "****** NEW GAME ******")
 
 	// was this the intent
 	g.Player.Hand.Deal(&g.Shoe)
@@ -137,8 +137,8 @@ func (g *Game) Start() {
 	g.Player.Hand.Deal(&g.Shoe)
 	g.Dealer.Hand.Deal(&g.Shoe)
 
-	fmt.Println(g.Dealer.DealerString())
-	fmt.Println("Player has " + g.Player.String())
+	fmt.Fprintln(g.output, g.Dealer.DealerString())
+	fmt.Fprintln(g.output, "Player has "+g.Player.String())
 
 	if g.Player.Score() == 21 {
 		g.Player.HandOutcome = OutcomeBlackjack
@@ -158,7 +158,7 @@ func (g *Game) Start() {
 			g.Player.Hand.Deal(&g.Shoe)
 			g.Player.Action = None
 
-			fmt.Println("Player has " + g.Player.String())
+			fmt.Fprintln(g.output, "Player has "+g.Player.String())
 			if g.Player.Score() > 21 {
 				g.Player.HandOutcome = OutcomeBust
 			}
@@ -169,20 +169,20 @@ func (g *Game) Start() {
 	// question
 	if g.Player.Action != ActionQuit {
 		if g.Player.HandOutcome <= OutcomeBlackjack && g.Player.HandOutcome <= OutcomeBust {
-			fmt.Println("")
-			fmt.Println("****** FINAL ROUND ******")
+			fmt.Fprintln(g.output, "")
+			fmt.Fprintln(g.output, "****** FINAL ROUND ******")
 
 			for g.Dealer.Score() <= 16 || (g.Dealer.Score() == 17 && g.Dealer.MinScore() != 17) {
 				g.Dealer.Hand.Deal(&g.Shoe)
 			}
 			g.Dealer.Action = ActionStand
 		}
-		fmt.Println("Dealer has " + g.Dealer.String())
-		fmt.Println("Player has " + g.Player.String())
-		fmt.Println("")
+		fmt.Fprintln(g.output, "Dealer has "+g.Dealer.String())
+		fmt.Fprintln(g.output, "Player has "+g.Player.String())
+		fmt.Fprintln(g.output, "")
 
 		g.Outcome()
-		fmt.Println(ReportMap[g.Player.HandOutcome])
+		fmt.Fprintln(g.output, ReportMap[g.Player.HandOutcome])
 		g.SetPlayerWinLoseTie(g.Player.HandOutcome)
 		g.HandsPlayed += 1
 		g.SetPlayerActionForAiHandsPlayed()
@@ -237,7 +237,7 @@ func (g *Game) GetPlayerReport() string {
 func GetPlayerAction() Action {
 
 	var answer string
-	fmt.Println("Please choose (H)it, (S)tand or (Q)uit")
+	fmt.Fprintln(os.Stdout, "Please choose (H)it, (S)tand or (Q)uit")
 	fmt.Scanf("%s\n", &answer)
 	return ActionMap[strings.ToLower(answer)]
 }

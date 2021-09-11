@@ -181,17 +181,14 @@ func (g *Game) Start() {
 	g.ShowPlayerCards(g.output)
 
 	for index := range g.Players {
+
 		if g.Players[index].Score() == 21 {
 			g.Players[index].HandOutcome = OutcomeBlackjack
+			//ok = false
 		}
-		ok := g.Players[index].PlayerContinue()
 
-		for ok {
+		for g.Players[index].GetStatus() {
 			g.Players[index].SetPlayerAction(g.output, g.input)
-
-			if g.Players[index].Action == ActionQuit {
-				break
-			}
 
 			if g.Players[index].Action == ActionHit {
 
@@ -202,6 +199,7 @@ func (g *Game) Start() {
 				fmt.Fprintln(g.output, g.Players[index].Name+" has "+g.Players[index].String())
 				if g.Players[index].Score() > 21 {
 					g.Players[index].HandOutcome = OutcomeBust
+					//ok = false
 				}
 
 			}
@@ -316,10 +314,6 @@ func (g *Game) ResetPlayers() {
 
 }
 
-func (p *Player) GetPlayerReport() string {
-	return "Player won: " + fmt.Sprint(p.PlayerWin) + ", lost: " + fmt.Sprint(p.PlayerLose) + " and tied: " + fmt.Sprint(p.PlayerTie)
-}
-
 type Player struct {
 	Name            string
 	Hand            []cards.Card
@@ -331,6 +325,14 @@ type Player struct {
 	PlayerWin       int
 	PlayerLose      int
 	PlayerTie       int
+}
+
+func (p Player) GetStatus() bool {
+	return p.Action != ActionQuit && p.Action != ActionStand && p.HandOutcome != OutcomeBlackjack && p.HandOutcome != OutcomeBust
+}
+
+func (p *Player) GetPlayerReport() string {
+	return "Player won: " + fmt.Sprint(p.PlayerWin) + ", lost: " + fmt.Sprint(p.PlayerLose) + " and tied: " + fmt.Sprint(p.PlayerTie)
 }
 
 func (p *Player) SetPlayerAction(output io.Writer, input io.Reader) {
@@ -354,11 +356,6 @@ func (p *Player) SetPlayerWinLoseTie(outcome Outcome) {
 	} else {
 		p.PlayerLose += 1
 	}
-}
-
-func (p Player) PlayerContinue() bool {
-
-	return p.HandOutcome != OutcomeBlackjack && p.HandOutcome != OutcomeBust && p.Action != ActionStand
 }
 
 func (p Player) String() string {

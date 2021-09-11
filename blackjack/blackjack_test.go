@@ -61,11 +61,11 @@ func TestNewBlackjackGame(t *testing.T) {
 
 	g.Players[0].HandOutcome = blackjack.OutcomeBlackjack
 
-	wantContinue := false
-	gotContinue := g.Players[0].PlayerContinue()
+	wantStatus := false
+	gotStatus := g.Players[0].GetStatus()
 
-	if wantContinue != gotContinue {
-		t.Fatalf("wanted: %v, got: %v", wantContinue, gotContinue)
+	if wantStatus != gotStatus {
+		t.Fatalf("want: %v, got:%v", wantStatus, gotStatus)
 	}
 
 	g.DealerPlay()
@@ -131,14 +131,17 @@ func TestMultiPlayers(t *testing.T) {
 		{Rank: cards.Ace, Suit: cards.Club},
 		{Rank: cards.Eight, Suit: cards.Club},
 		{Rank: cards.Nine, Suit: cards.Club},
+		{Rank: cards.Ten, Suit: cards.Spade},
 
 		{Rank: cards.Jack, Suit: cards.Club},
 		{Rank: cards.Ten, Suit: cards.Club},
 		{Rank: cards.Six, Suit: cards.Club},
+		{Rank: cards.Seven, Suit: cards.Spade},
 
 		{Rank: cards.Seven, Suit: cards.Club},
 		{Rank: cards.Four, Suit: cards.Club},
 		{Rank: cards.Three, Suit: cards.Club},
+		{Rank: cards.King, Suit: cards.Club},
 	}
 
 	deck := cards.Deck{
@@ -155,12 +158,14 @@ func TestMultiPlayers(t *testing.T) {
 	players := []blackjack.Player{
 		{Name: "Planty"},
 		{Name: "Kevin"},
+		{Name: "Donald"},
 	}
 
 	g.Players = players
 
 	g.Players[0].Action = blackjack.ActionStand
 	g.Players[1].Action = blackjack.ActionStand
+	g.Players[2].Action = blackjack.ActionHit
 
 	g.Start()
 
@@ -168,7 +173,7 @@ func TestMultiPlayers(t *testing.T) {
 
 	g.Outcome(output)
 
-	want := "Planty: ***** Blackjack!  Player wins *****\nKevin: ***** Player wins! *****\n"
+	want := "Planty: ***** Blackjack!  Player wins *****\nKevin: ***** Player wins! *****\nDonald: ***** Bust!  Player loses *****\n"
 	got := output.String()
 
 	if want != got {

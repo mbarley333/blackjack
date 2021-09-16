@@ -3,15 +3,13 @@ package main
 import (
 	"cards/blackjack"
 	"log"
+	"os"
 )
 
 func main() {
-	g, err := blackjack.NewBlackjackGame(
-		blackjack.WithAiType(blackjack.AiStandOnly),
-		blackjack.WithAiHandsToPlay(100),
-	)
+	g, err := blackjack.NewBlackjackGame()
 	if err != nil {
 		log.Fatal(err)
 	}
-	g.RunCLI()
+	g.RunCLI(os.Stdout, os.Stdin)
 }

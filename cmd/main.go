@@ -3,7 +3,6 @@ package main
 import (
 	"cards/blackjack"
 	"log"
-	"os"
 )
 
 func main() {
@@ -11,5 +10,6 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	g.RunCLI(os.Stdout, os.Stdin)
+	log.Fatal(g.RunCLI())
+
 }

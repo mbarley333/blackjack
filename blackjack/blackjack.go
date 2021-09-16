@@ -17,6 +17,7 @@ var ActionStringMap = map[Action]string{
 	ActionStand: "Stand",
 	ActionQuit:  "Quit",
 	None:        "Invalid Action",
+	ActionBet:   "Bet",
 }
 
 func (a Action) String() string {
@@ -28,6 +29,7 @@ const (
 	ActionStand
 	ActionHit
 	ActionQuit
+	ActionBet
 )
 
 var ActionMap = map[string]Action{
@@ -35,6 +37,7 @@ var ActionMap = map[string]Action{
 	"s": ActionStand,
 	"q": ActionQuit,
 	"n": None,
+	"b": ActionBet,
 }
 
 type Outcome int
@@ -76,7 +79,7 @@ const (
 	PlayerTypeAiStandOnly
 )
 
-var PlayerTypeMap = map[PlayerType]func(io.Writer, io.Reader, Stage) Action{
+var PlayerTypeMap = map[PlayerType]func(io.Writer, io.Reader) Action{
 	PlayerTypeHuman:       GetHumanAction,
 	PlayerTypeAiStandOnly: GetAiActionStandOnly,
 }
@@ -86,22 +89,9 @@ var PlayerTypeInputMap = map[string]PlayerType{
 	"a": PlayerTypeAiStandOnly,
 }
 
-type Stage int
-
-const (
-	StageNone Stage = iota
-	StageBetting
-	StageAction
-)
-
-var StageMap = map[Stage]string{
-	StageNone:    "Invalid Stage",
-	StageBetting: "Betting",
-	StageAction:  "Action",
-}
-
-func (s Stage) String() string {
-	return StageMap[s]
+var PlayerTypeBetMap = map[PlayerType]func(io.Writer, io.Reader, Player) Player{
+	PlayerTypeHuman:       HumanBet,
+	PlayerTypeAiStandOnly: AiBet,
 }
 
 type Game struct {
@@ -111,7 +101,6 @@ type Game struct {
 	Random  rand.Rand
 	output  io.Writer
 	input   io.Reader
-	Stage   Stage
 }
 
 type Option func(*Game) error
@@ -156,10 +145,6 @@ func NewBlackjackGame(opts ...Option) (*Game, error) {
 	return game, nil
 }
 
-func (g *Game) Betting() {
-	g.Stage = StageBetting
-}
-
 func (g *Game) PlayerSetup(output io.Writer, input io.Reader) error {
 
 	var answer int
@@ -172,7 +157,6 @@ func (g *Game) PlayerSetup(output io.Writer, input io.Reader) error {
 	for i := 1; i <= answer; i++ {
 
 		player, err := NewPlayer(output, input)
-		//player := Player{}
 		if err != nil {
 			return fmt.Errorf("unable to setup players, %s", err)
 		}
@@ -181,19 +165,20 @@ func (g *Game) PlayerSetup(output io.Writer, input io.Reader) error {
 	}
 
 	return nil
-
 }
 
-func (g *Game) RunCLI(output io.Writer, input io.Reader) {
+func (g *Game) RunCLI() error {
 
-	g.PlayerSetup(output, input)
+	g.PlayerSetup(g.output, g.input)
 
 	for g.Continue() {
+		g.Betting()
 		g.Players = g.RemoveQuitPlayers()
 		g.ResetPlayers()
 		g.Start()
 	}
 
+	return nil
 }
 
 func (g Game) Continue() bool {
@@ -204,6 +189,14 @@ func (g Game) Continue() bool {
 		}
 	}
 	return false
+}
+
+func (g *Game) Betting() {
+
+	for index := range g.Players {
+		g.Players[index] = g.Players[index].Bet(g.output, g.input, g.Players[index])
+	}
+
 }
 
 func (g *Game) Start() {
@@ -225,9 +218,8 @@ func (g *Game) Start() {
 		}
 
 		for g.Players[index].Continue() {
-			//g.Players[index].SetPlayerAction(g.output, g.input)
 			if g.Players[index].Action == None {
-				g.Players[index].Action = g.Players[index].GetPlayerAction(g.output, g.input, g.Stage)
+				g.Players[index].Action = g.Players[index].Decide(g.output, g.input)
 			}
 			if g.Players[index].Action == ActionHit {
 
@@ -251,8 +243,6 @@ func (g *Game) Start() {
 	fmt.Fprintln(g.output, "")
 
 	g.Outcome(g.output)
-
-	fmt.Println(g.Players)
 
 }
 
@@ -344,17 +334,18 @@ func (g *Game) RemoveQuitPlayers() []Player {
 }
 
 type Player struct {
-	Name            string
-	Hand            []cards.Card
-	Action          Action
-	HandOutcome     Outcome
-	GetPlayerAction func(io.Writer, io.Reader, Stage) Action
-	AiHandsToPlay   int
-	HandsPlayed     int
-	Win             int
-	Lose            int
-	Tie             int
-	Logic           string
+	Name          string
+	Hand          []cards.Card
+	Action        Action
+	HandOutcome   Outcome
+	Bet           func(io.Writer, io.Reader, Player) Player
+	Decide        func(io.Writer, io.Reader) Action
+	AiHandsToPlay int
+	HandsPlayed   int
+	Win           int
+	Lose          int
+	Tie           int
+	Logic         string
 }
 
 func (p Player) Continue() bool {
@@ -438,6 +429,7 @@ func NewPlayer(output io.Writer, input io.Reader) (Player, error) {
 
 	playerTypeInputValue := PlayerTypeInputMap[strings.ToLower(playerTypeInput)]
 	playerType := PlayerTypeMap[playerTypeInputValue]
+	playerTypeBet := PlayerTypeBetMap[playerTypeInputValue]
 
 	aiHands := 0
 	var err error
@@ -451,16 +443,17 @@ func NewPlayer(output io.Writer, input io.Reader) (Player, error) {
 	}
 
 	player := Player{
-		Name:            name,
-		GetPlayerAction: playerType,
-		AiHandsToPlay:   aiHands,
-		Logic:           strings.ToLower(playerTypeInput),
+		Name:          name,
+		Decide:        playerType,
+		AiHandsToPlay: aiHands,
+		Logic:         strings.ToLower(playerTypeInput),
+		Bet:           playerTypeBet,
 	}
 
 	return player, nil
 }
 
-func GetHumanAction(output io.Writer, input io.Reader, stage Stage) Action {
+func GetHumanAction(output io.Writer, input io.Reader) Action {
 
 	var answer string
 
@@ -470,9 +463,40 @@ func GetHumanAction(output io.Writer, input io.Reader, stage Stage) Action {
 	return ActionMap[strings.ToLower(answer)]
 }
 
-func GetAiActionStandOnly(output io.Writer, input io.Reader, stage Stage) Action {
+func GetAiActionStandOnly(output io.Writer, input io.Reader) Action {
 
 	return ActionStand
+}
+
+func HumanBet(output io.Writer, input io.Reader, player Player) Player {
+
+	var answer string
+
+	fmt.Fprintln(output, "")
+	fmt.Fprintln(output, "****** BET or QUIT ******")
+	fmt.Fprintln(output, "Enter (b)et or (q)uit:")
+
+	fmt.Fscanln(input, &answer)
+
+	if strings.ToLower(answer) == "q" {
+		player.Action = ActionQuit
+	} else {
+		player.Action = ActionBet
+	}
+
+	return player
+
+}
+
+func AiBet(output io.Writer, input io.Reader, player Player) Player {
+
+	if player.HandsPlayed == player.AiHandsToPlay {
+		player.Action = ActionQuit
+	} else {
+		player.Action = ActionBet
+	}
+
+	return player
 }
 
 // additional features

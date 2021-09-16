@@ -34,17 +34,19 @@ func TestNewBlackjackGame(t *testing.T) {
 		Cards: stack,
 	}
 
+	setupOutput := &bytes.Buffer{}
+	setupInput := strings.NewReader("1\nPlanty\na\n3")
+
 	g, err := blackjack.NewBlackjackGame(
 		blackjack.WithCustomDeck(deck),
+		blackjack.WithOutput(setupOutput),
+		blackjack.WithInput(setupInput),
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	setupOutput := &bytes.Buffer{}
-	setupInput := strings.NewReader("1\nPlanty\na\n3")
-
-	g.RunCLI(setupOutput, setupInput)
+	g.RunCLI()
 
 	want := 3
 	got := g.Players[0].Win + g.Players[0].Lose + g.Players[0].Tie
@@ -53,16 +55,16 @@ func TestNewBlackjackGame(t *testing.T) {
 		t.Fatalf("want: %d, got:%d", want, got)
 	}
 
-	// outputReport := &bytes.Buffer{}
+	outputReport := &bytes.Buffer{}
 
-	// g.Players[0].GetPlayerReport(outputReport)
+	g.Players[0].GetPlayerReport(outputReport)
 
-	// wantReport := "************** Player Win-Lose-Tie Report **************\nPlayer won: 1, lost: 0 and tied: 0\n"
-	// gotReport := outputReport.String()
+	wantReport := "************** Player Win-Lose-Tie Report **************\nPlayer won: 1, lost: 2 and tied: 0\n"
+	gotReport := outputReport.String()
 
-	// if wantReport != gotReport {
-	// 	t.Fatalf("want: %q, got: %q", wantReport, gotReport)
-	// }
+	if wantReport != gotReport {
+		t.Fatalf("want: %q, got: %q", wantReport, gotReport)
+	}
 }
 
 func TestDealerBust(t *testing.T) {
@@ -81,17 +83,19 @@ func TestDealerBust(t *testing.T) {
 		Cards: stack,
 	}
 
+	setupOutput := &bytes.Buffer{}
+	setupInput := strings.NewReader("1\nPlanty\na\n1")
+
 	g, err := blackjack.NewBlackjackGame(
 		blackjack.WithCustomDeck(deck),
+		blackjack.WithOutput(setupOutput),
+		blackjack.WithInput(setupInput),
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	setupOutput := &bytes.Buffer{}
-	setupInput := strings.NewReader("1\nPlanty\na\n1")
-
-	g.RunCLI(setupOutput, setupInput)
+	g.RunCLI()
 
 	got := blackjack.ReportMap[g.Players[0].HandOutcome]
 
@@ -182,126 +186,64 @@ func TestRemoveQuitPlayers(t *testing.T) {
 
 }
 
-// func TestDeal(t *testing.T) {
-// 	t.Parallel()
+func TestHumanBet(t *testing.T) {
+	t.Parallel()
 
-// 	stack := []cards.Card{
-// 		{Rank: cards.Ace, Suit: cards.Club},
-// 		{Rank: cards.Seven, Suit: cards.Club},
-// 		{Rank: cards.Jack, Suit: cards.Club},
-// 		{Rank: cards.Queen, Suit: cards.Club},
-// 	}
+	output := &bytes.Buffer{}
+	input := strings.NewReader("q")
 
-// 	deck := cards.Deck{
-// 		Cards: stack,
-// 	}
+	g, err := blackjack.NewBlackjackGame(
+		blackjack.WithOutput(output),
+		blackjack.WithInput(input),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-// 	g, err := blackjack.NewBlackjackGame(
-// 		blackjack.WithCustomDeck(deck),
-// 	)
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
+	player := blackjack.Player{
+		Name: "test",
+		Bet:  blackjack.HumanBet,
+	}
 
-// 	player := blackjack.Player{
-// 		Name: "Test Player",
-// 	}
+	g.Players = append(g.Players, player)
 
-// 	g.Players = append(g.Players, player)
+	g.Players[0] = g.Players[0].Bet(output, input, player)
 
-// 	g.OpeningDeal()
+	want := blackjack.ActionQuit.String()
+	got := g.Players[0].Action.String()
 
-// 	want := 4
-// 	got := len(g.Players[0].Hand) + len(g.Dealer.Hand)
+	if want != got {
+		t.Fatalf("wanted: %q, got: %q", want, got)
+	}
 
-// 	if want != got {
-// 		t.Fatalf("wanted:%d, got:%d", want, got)
-// 	}
+}
 
-// }
+func TestAiBet(t *testing.T) {
+	t.Parallel()
 
-// func TestPlayerSetup(t *testing.T) {
+	g, err := blackjack.NewBlackjackGame()
+	if err != nil {
+		t.Fatal(err)
+	}
 
-// 	t.Parallel()
-// 	g, err := blackjack.NewBlackjackGame()
+	player := blackjack.Player{
+		Name:          "ai",
+		Bet:           blackjack.AiBet,
+		AiHandsToPlay: 3,
+		HandsPlayed:   3,
+	}
 
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
+	g.Players = append(g.Players, player)
 
-// 	output := &bytes.Buffer{}
-// 	input := strings.NewReader("1")
+	g.Betting()
 
-// 	want := "Please enter number of Blackjack players:\n"
-// 	g.PlayerSetup(output, input)
-// 	got := output.String()
+	//g.Players[0] = g.Players[0].Bet(os.Stdout, os.Stdin, player)
 
-// 	if want != got {
-// 		t.Fatalf("wanted: %q, got:%q", want, got)
-// 	}
+	want := blackjack.ActionQuit.String()
+	got := g.Players[0].Action.String()
 
-// 	wantPlayers := 1
-// 	gotPlayers := len(g.Players)
-// 	if wantPlayers != gotPlayers {
-// 		t.Fatalf("wanted: %d, got:%d", wantPlayers, gotPlayers)
-// 	}
+	if want != got {
+		t.Fatalf("wanted: %q, got: %q", want, got)
+	}
 
-// }
-
-// func TestNewPlayer(t *testing.T) {
-// 	t.Parallel()
-
-// 	output := &bytes.Buffer{}
-// 	input := strings.NewReader("1\ntest\nA\n10")
-
-// 	g, err := blackjack.NewBlackjackGame(
-// 		blackjack.WithOutput(output),
-// 		blackjack.WithInput(input),
-// 	)
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
-
-// 	g.RunCLI(g.Output, g.Input)
-
-// 	want := 10
-// 	got := g.Players[0].Lose + g.Players[0].Tie + g.Players[0].Win
-
-// 	if want != got {
-// 		t.Fatalf("wanted: %d, got: %d", want, got)
-// 	}
-// }
-
-// func TestGameStage(t *testing.T) {
-// 	t.Parallel()
-
-// 	g, err := blackjack.NewBlackjackGame()
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
-
-// 	player := blackjack.Player{
-// 		Name: "Test",
-// 	}
-
-// 	g.Players = append(g.Players, player)
-
-// 	want := "Invalid Stage"
-
-// 	got := g.Stage.String()
-
-// 	if want != got {
-// 		t.Fatalf("wanted: %s, got:%s", want, got)
-// 	}
-
-// 	g.Betting()
-
-// 	wantBet := "Betting"
-
-// 	gotBet := g.Stage.String()
-
-// 	if wantBet != gotBet {
-// 		t.Fatalf("wanted: %s, got:%s", want, got)
-// 	}
-
-// }
+}

@@ -167,13 +167,16 @@ func (g *Game) PlayerSetup(output io.Writer, input io.Reader) error {
 	return nil
 }
 
-func (g *Game) RunCLI() error {
+func RunCLI(g *Game) error {
 
 	g.PlayerSetup(g.output, g.input)
 
 	for g.Continue() {
 		g.Betting()
 		g.Players = g.RemoveQuitPlayers()
+		if len(g.Players) == 0 {
+			RunCLI(g)
+		}
 		g.ResetPlayers()
 		g.Start()
 	}
@@ -200,8 +203,6 @@ func (g *Game) Betting() {
 }
 
 func (g *Game) Start() {
-
-	// bet or quit
 
 	fmt.Fprintln(g.output, "")
 	fmt.Fprintln(g.output, "****** NEW GAME ******")

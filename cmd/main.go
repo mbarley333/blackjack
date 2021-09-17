@@ -10,6 +10,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Fatal(g.RunCLI())
+
+	log.Fatal(blackjack.RunCLI(g))
 
 }

@@ -46,7 +46,7 @@ func TestNewBlackjackGame(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	g.RunCLI()
+	blackjack.RunCLI(g)
 
 	want := 3
 	got := g.Players[0].Win + g.Players[0].Lose + g.Players[0].Tie
@@ -95,7 +95,7 @@ func TestDealerBust(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	g.RunCLI()
+	blackjack.RunCLI(g)
 
 	got := blackjack.ReportMap[g.Players[0].HandOutcome]
 
@@ -208,36 +208,6 @@ func TestHumanBet(t *testing.T) {
 	g.Players = append(g.Players, player)
 
 	g.Players[0] = g.Players[0].Bet(output, input, player)
-
-	want := blackjack.ActionQuit.String()
-	got := g.Players[0].Action.String()
-
-	if want != got {
-		t.Fatalf("wanted: %q, got: %q", want, got)
-	}
-
-}
-
-func TestAiBet(t *testing.T) {
-	t.Parallel()
-
-	g, err := blackjack.NewBlackjackGame()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	player := blackjack.Player{
-		Name:          "ai",
-		Bet:           blackjack.AiBet,
-		AiHandsToPlay: 3,
-		HandsPlayed:   3,
-	}
-
-	g.Players = append(g.Players, player)
-
-	g.Betting()
-
-	//g.Players[0] = g.Players[0].Bet(os.Stdout, os.Stdin, player)
 
 	want := blackjack.ActionQuit.String()
 	got := g.Players[0].Action.String()

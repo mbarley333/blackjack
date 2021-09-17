@@ -17,7 +17,6 @@ var ActionStringMap = map[Action]string{
 	ActionStand: "Stand",
 	ActionQuit:  "Quit",
 	None:        "Invalid Action",
-	ActionBet:   "Bet",
 }
 
 func (a Action) String() string {
@@ -29,7 +28,6 @@ const (
 	ActionStand
 	ActionHit
 	ActionQuit
-	ActionBet
 )
 
 var ActionMap = map[string]Action{
@@ -37,7 +35,6 @@ var ActionMap = map[string]Action{
 	"s": ActionStand,
 	"q": ActionQuit,
 	"n": None,
-	"b": ActionBet,
 }
 
 type Outcome int
@@ -145,6 +142,32 @@ func NewBlackjackGame(opts ...Option) (*Game, error) {
 	return game, nil
 }
 
+func RunCLI() error {
+
+	g, err := NewBlackjackGame()
+	if err != nil {
+		return fmt.Errorf("cannot create new blackjack game, %s", err)
+	}
+
+	g.PlayerSetup(g.output, g.input)
+
+	for g.Continue() {
+		g.Betting()
+		g.Players = g.RemoveQuitPlayers()
+		if len(g.Players) == 0 {
+			RunCLI()
+		}
+		g.ResetPlayers()
+		g.Start()
+	}
+
+	return nil
+}
+
+func (g *Game) AddPlayer(player Player) {
+	g.Players = append(g.Players, player)
+}
+
 func (g *Game) PlayerSetup(output io.Writer, input io.Reader) error {
 
 	var answer int
@@ -161,24 +184,7 @@ func (g *Game) PlayerSetup(output io.Writer, input io.Reader) error {
 			return fmt.Errorf("unable to setup players, %s", err)
 		}
 
-		g.Players = append(g.Players, player)
-	}
-
-	return nil
-}
-
-func RunCLI(g *Game) error {
-
-	g.PlayerSetup(g.output, g.input)
-
-	for g.Continue() {
-		g.Betting()
-		g.Players = g.RemoveQuitPlayers()
-		if len(g.Players) == 0 {
-			RunCLI(g)
-		}
-		g.ResetPlayers()
-		g.Start()
+		g.AddPlayer(player)
 	}
 
 	return nil
@@ -302,7 +308,7 @@ func (g *Game) Outcome(output io.Writer) {
 
 		g.Players[index].SetPlayerWinLoseTie(outcome)
 
-		if g.Players[index].Logic == "a" && g.Players[index].AiHandsToPlay == g.Players[index].HandsPlayed {
+		if g.Players[index].Logic == "a" && g.Players[index].AiHandsToPlay == g.Players[index].Record.HandsPlayed {
 
 			g.Players[index].Action = ActionQuit
 		}
@@ -342,11 +348,12 @@ type Player struct {
 	Bet           func(io.Writer, io.Reader, Player) Player
 	Decide        func(io.Writer, io.Reader) Action
 	AiHandsToPlay int
-	HandsPlayed   int
-	Win           int
-	Lose          int
-	Tie           int
-	Logic         string
+	// HandsPlayed   int
+	// Win           int
+	// Lose          int
+	// Tie           int
+	Record Record
+	Logic  string
 }
 
 func (p Player) Continue() bool {
@@ -354,23 +361,17 @@ func (p Player) Continue() bool {
 	return p.Action != ActionQuit && p.Action != ActionStand && p.HandOutcome != OutcomeBlackjack && p.HandOutcome != OutcomeBust
 }
 
-func (p *Player) GetPlayerReport(output io.Writer) {
-
-	fmt.Fprintln(output, "************** Player Win-Lose-Tie Report **************")
-	fmt.Fprintln(output, "Player won: "+fmt.Sprint(p.Win)+", lost: "+fmt.Sprint(p.Lose)+" and tied: "+fmt.Sprint(p.Tie))
-}
-
 func (p *Player) SetPlayerWinLoseTie(outcome Outcome) {
 
 	if outcome == OutcomeWin || outcome == OutcomeBlackjack {
-		p.Win += 1
+		p.Record.Win += 1
 	} else if outcome == OutcomeTie {
-		p.Tie += 1
+		p.Record.Tie += 1
 	} else {
-		p.Lose += 1
+		p.Record.Lose += 1
 	}
 
-	p.HandsPlayed += 1
+	p.Record.HandsPlayed += 1
 
 }
 
@@ -408,6 +409,28 @@ func (p Player) MinScore() int {
 		score += min(int(c.Rank), 10)
 	}
 	return score
+}
+
+type Record struct {
+	Win         int
+	Lose        int
+	Tie         int
+	HandsPlayed int
+}
+
+func (r Record) String() string {
+
+	str := []string{
+		"************** Player Win-Lose-Tie Report **************\nPlayer won: ",
+		strconv.Itoa(r.Win),
+		", lost: ",
+		strconv.Itoa(r.Lose),
+		" and tied: ",
+		strconv.Itoa(r.Tie),
+		"\n",
+	}
+
+	return strings.Join(str, "")
 }
 
 func min(a, b int) int {
@@ -481,8 +504,6 @@ func HumanBet(output io.Writer, input io.Reader, player Player) Player {
 
 	if strings.ToLower(answer) == "q" {
 		player.Action = ActionQuit
-	} else {
-		player.Action = ActionBet
 	}
 
 	return player
@@ -491,12 +512,9 @@ func HumanBet(output io.Writer, input io.Reader, player Player) Player {
 
 func AiBet(output io.Writer, input io.Reader, player Player) Player {
 
-	if player.HandsPlayed == player.AiHandsToPlay {
+	if player.Record.HandsPlayed == player.AiHandsToPlay {
 		player.Action = ActionQuit
-	} else {
-		player.Action = ActionBet
 	}
-
 	return player
 }
 

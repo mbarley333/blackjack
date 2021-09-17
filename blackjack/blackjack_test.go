@@ -6,6 +6,8 @@ import (
 	"cards/blackjack"
 	"strings"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestNewBlackjackGame(t *testing.T) {
@@ -34,77 +36,52 @@ func TestNewBlackjackGame(t *testing.T) {
 		Cards: stack,
 	}
 
-	setupOutput := &bytes.Buffer{}
-	setupInput := strings.NewReader("1\nPlanty\na\n3")
+	output := &bytes.Buffer{}
+	input := strings.NewReader("1\nPlanty\na\n1")
 
 	g, err := blackjack.NewBlackjackGame(
 		blackjack.WithCustomDeck(deck),
-		blackjack.WithOutput(setupOutput),
-		blackjack.WithInput(setupInput),
+		blackjack.WithOutput(output),
+		blackjack.WithInput(input),
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	blackjack.RunCLI(g)
-
-	want := 3
-	got := g.Players[0].Win + g.Players[0].Lose + g.Players[0].Tie
-
-	if want != got {
-		t.Fatalf("want: %d, got:%d", want, got)
+	g.PlayerSetup(output, input)
+	for g.Continue() {
+		g.Betting()
+		g.Players = g.RemoveQuitPlayers()
+		if len(g.Players) == 0 {
+			blackjack.RunCLI()
+		}
+		g.ResetPlayers()
+		g.Start()
 	}
 
-	outputReport := &bytes.Buffer{}
+	want := blackjack.Record{
+		Win:         1,
+		HandsPlayed: 1,
+	}
+	got := g.Players[0].Record
 
-	g.Players[0].GetPlayerReport(outputReport)
+	if !cmp.Equal(want, got) {
+		t.Errorf("want %v, got %v", want, got)
+	}
 
-	wantReport := "************** Player Win-Lose-Tie Report **************\nPlayer won: 1, lost: 2 and tied: 0\n"
-	gotReport := outputReport.String()
+	wantReport := "************** Player Win-Lose-Tie Report **************\nPlayer won: 1, lost: 0 and tied: 0\n"
+	gotReport := g.Players[0].Record.String()
 
 	if wantReport != gotReport {
 		t.Fatalf("want: %q, got: %q", wantReport, gotReport)
 	}
-}
 
-func TestDealerBust(t *testing.T) {
-	t.Parallel()
+	wantDealerScore := 25
+	gotDealerScore := g.Dealer.Score()
 
-	stack := []cards.Card{
-		{Rank: cards.Ace, Suit: cards.Club},
-		{Rank: cards.Eight, Suit: cards.Club},
-		{Rank: cards.Nine, Suit: cards.Club},
-		{Rank: cards.Seven, Suit: cards.Club},
-		{Rank: cards.Ten, Suit: cards.Club},
-		{Rank: cards.King, Suit: cards.Club},
+	if wantDealerScore != gotDealerScore {
+		t.Fatalf("want: %d, got: %d", want, got)
 	}
-
-	deck := cards.Deck{
-		Cards: stack,
-	}
-
-	setupOutput := &bytes.Buffer{}
-	setupInput := strings.NewReader("1\nPlanty\na\n1")
-
-	g, err := blackjack.NewBlackjackGame(
-		blackjack.WithCustomDeck(deck),
-		blackjack.WithOutput(setupOutput),
-		blackjack.WithInput(setupInput),
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	blackjack.RunCLI(g)
-
-	got := blackjack.ReportMap[g.Players[0].HandOutcome]
-
-	want := "***** Player wins! *****"
-
-	if want != got {
-		t.Fatalf("wanted: %s, got: %s", want, got)
-	}
-
 }
 
 func TestMultiPlayers(t *testing.T) {
@@ -136,17 +113,23 @@ func TestMultiPlayers(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	players := []blackjack.Player{
-		{Name: "Planty"},
-		{Name: "Kevin"},
-		{Name: "Donald"},
+	player := blackjack.Player{
+		Name:   "Planty",
+		Action: blackjack.ActionStand,
 	}
+	g.AddPlayer(player)
 
-	g.Players = players
+	player2 := blackjack.Player{
+		Name:   "Kevin",
+		Action: blackjack.ActionStand,
+	}
+	g.AddPlayer(player2)
 
-	g.Players[0].Action = blackjack.ActionStand
-	g.Players[1].Action = blackjack.ActionStand
-	g.Players[2].Action = blackjack.ActionHit
+	player3 := blackjack.Player{
+		Name:   "Donald",
+		Action: blackjack.ActionHit,
+	}
+	g.AddPlayer(player3)
 
 	g.Start()
 
@@ -154,11 +137,25 @@ func TestMultiPlayers(t *testing.T) {
 
 	g.Outcome(output)
 
-	want := "BlackjackWinBust"                                                                                       //"Planty: ***** Blackjack!  Player wins *****\nKevin: ***** Player wins! *****\nDonald: ***** Bust!  Player loses *****\n"
-	got := g.Players[0].HandOutcome.String() + g.Players[1].HandOutcome.String() + g.Players[2].HandOutcome.String() //output.String()
+	wantPlayer := blackjack.OutcomeBlackjack
+	gotPlayer := g.Players[0].HandOutcome
 
-	if want != got {
-		t.Fatalf("wanted:%q, got %q", want, got)
+	if wantPlayer != gotPlayer {
+		t.Fatalf("wanted: %q, got: %q", wantPlayer.String(), gotPlayer.String())
+	}
+
+	wantPlayer2 := blackjack.OutcomeWin
+	gotPlayer2 := g.Players[1].HandOutcome
+
+	if wantPlayer2 != gotPlayer2 {
+		t.Fatalf("wanted: %q, got: %q", wantPlayer2.String(), gotPlayer2.String())
+	}
+
+	wantPlayer3 := blackjack.OutcomeBust
+	gotPlayer3 := g.Players[2].HandOutcome
+
+	if wantPlayer3 != gotPlayer3 {
+		t.Fatalf("wanted: %q, got: %q", wantPlayer3.String(), gotPlayer3.String())
 	}
 
 }

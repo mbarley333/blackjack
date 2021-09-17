@@ -6,11 +6,7 @@ import (
 )
 
 func main() {
-	g, err := blackjack.NewBlackjackGame()
-	if err != nil {
-		log.Fatal(err)
-	}
 
-	log.Fatal(blackjack.RunCLI(g))
+	log.Fatal(blackjack.RunCLI())
 
 }

@@ -348,12 +348,8 @@ type Player struct {
 	Bet           func(io.Writer, io.Reader, Player) Player
 	Decide        func(io.Writer, io.Reader) Action
 	AiHandsToPlay int
-	// HandsPlayed   int
-	// Win           int
-	// Lose          int
-	// Tie           int
-	Record Record
-	Logic  string
+	Record        Record
+	Logic         string
 }
 
 func (p Player) Continue() bool {

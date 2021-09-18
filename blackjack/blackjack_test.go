@@ -202,7 +202,7 @@ func TestHumanBet(t *testing.T) {
 		Bet:  blackjack.HumanBet,
 	}
 
-	g.Players = append(g.Players, player)
+	g.AddPlayer(player)
 
 	g.Players[0] = g.Players[0].Bet(output, input, player)
 

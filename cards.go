@@ -15,7 +15,7 @@ const (
 	Heart
 )
 
-var suits = [...]Suit{Spade, Diamond, Club, Heart}
+var suits = []Suit{Spade, Diamond, Club, Heart}
 
 type Rank int
 
@@ -43,30 +43,32 @@ type Card struct {
 	Suit
 }
 
+var suitMap = map[Suit]string{
+	Spade:   "Spade",
+	Diamond: "Diamond",
+	Club:    "Club",
+	Heart:   "Heart",
+}
+
+var rankMap = map[Rank]string{
+	Ace:   "Ace",
+	Two:   "Two",
+	Three: "Three",
+	Four:  "Four",
+	Five:  "Five",
+	Six:   "Six",
+	Seven: "Seven",
+	Eight: "Eight",
+	Nine:  "Nine",
+	Ten:   "Ten",
+	Jack:  "Jack",
+	Queen: "Queen",
+	King:  "King",
+}
+
+// move to package level
 func (c Card) String() string {
-	suitMap := make(map[int]string)
-	suitMap[int(Spade)] = "Spade"
-	suitMap[int(Diamond)] = "Diamond"
-	suitMap[int(Club)] = "Club"
-	suitMap[int(Heart)] = "Heart"
-
-	rankMap := make(map[int]string)
-	rankMap[int(Ace)] = "Ace"
-	rankMap[int(Two)] = "Two"
-	rankMap[int(Three)] = "Three"
-	rankMap[int(Four)] = "Four"
-	rankMap[int(Five)] = "Five"
-	rankMap[int(Six)] = "Six"
-	rankMap[int(Seven)] = "Seven"
-	rankMap[int(Eight)] = "Eight"
-	rankMap[int(Nine)] = "Nine"
-	rankMap[int(Ten)] = "Ten"
-	rankMap[int(Jack)] = "Jack"
-	rankMap[int(Queen)] = "Queen"
-	rankMap[int(King)] = "King"
-
-	cardName := fmt.Sprintf("%s of %ss", rankMap[int(c.Rank)], suitMap[int(c.Suit)])
-	return cardName
+	return fmt.Sprintf("%s of %ss", rankMap[c.Rank], suitMap[c.Suit])
 }
 
 type Deck struct {

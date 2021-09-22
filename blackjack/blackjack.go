@@ -306,7 +306,7 @@ func (g *Game) Outcome(output io.Writer) {
 
 		g.Players[index].HandOutcome = outcome
 
-		g.Players[index].SetPlayerWinLoseTie(outcome)
+		g.Players[index].SetWinLoseTie(outcome)
 
 		if g.Players[index].Logic == "a" && g.Players[index].AiHandsToPlay == g.Players[index].Record.HandsPlayed {
 
@@ -348,12 +348,12 @@ type Player struct {
 	Bet           func(io.Writer, io.Reader, Player) Player
 	Decide        func(io.Writer, io.Reader) Action
 	AiHandsToPlay int
-	// HandsPlayed   int
-	// Win           int
-	// Lose          int
-	// Tie           int
-	Record Record
-	Logic  string
+	Record        Record
+	Logic         string
+}
+
+func (p *Player) Quit() {
+
 }
 
 func (p Player) Continue() bool {
@@ -361,7 +361,7 @@ func (p Player) Continue() bool {
 	return p.Action != ActionQuit && p.Action != ActionStand && p.HandOutcome != OutcomeBlackjack && p.HandOutcome != OutcomeBust
 }
 
-func (p *Player) SetPlayerWinLoseTie(outcome Outcome) {
+func (p *Player) SetWinLoseTie(outcome Outcome) {
 
 	if outcome == OutcomeWin || outcome == OutcomeBlackjack {
 		p.Record.Win += 1
@@ -433,6 +433,13 @@ func (r Record) String() string {
 	return strings.Join(str, "")
 }
 
+type Hand struct {
+	Cards   []cards.Card
+	Bet     int
+	Action  Action
+	Outcome Outcome
+}
+
 func min(a, b int) int {
 	if a < b {
 		return a
@@ -467,6 +474,7 @@ func NewPlayer(output io.Writer, input io.Reader) (Player, error) {
 	}
 
 	player := Player{
+
 		Name:          name,
 		Decide:        playerType,
 		AiHandsToPlay: aiHands,

@@ -183,34 +183,36 @@ func TestRemoveQuitPlayers(t *testing.T) {
 
 }
 
-func TestHumanBet(t *testing.T) {
+func TestPlayerQuit(t *testing.T) {
 	t.Parallel()
 
-	output := &bytes.Buffer{}
-	input := strings.NewReader("q")
-
-	g, err := blackjack.NewBlackjackGame(
-		blackjack.WithOutput(output),
-		blackjack.WithInput(input),
-	)
+	g, err := blackjack.NewBlackjackGame()
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	player := blackjack.Player{
-		Name: "test",
+		Name:   "quitter",
+		Bet:    blackjack.HumanBet,
+		Action: blackjack.ActionQuit,
+	}
+
+	g.AddPlayer(player)
+
+	player2 := blackjack.Player{
+		Name: "playon",
 		Bet:  blackjack.HumanBet,
 	}
 
-	g.Players = append(g.Players, player)
+	g.AddPlayer(player2)
 
-	g.Players[0] = g.Players[0].Bet(output, input, player)
+	g.Players[0].Quit()
 
-	want := blackjack.ActionQuit.String()
-	got := g.Players[0].Action.String()
+	want := 1
+	got := len(g.Players)
 
 	if want != got {
-		t.Fatalf("wanted: %q, got: %q", want, got)
+		t.Fatalf("wanted: %d, got: %d", want, got)
 	}
 
 }

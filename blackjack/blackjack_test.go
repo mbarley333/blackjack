@@ -194,30 +194,46 @@ func TestBetting(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := 99
-	got := player.Cash
-
-	if want != got {
-		t.Fatalf("wanted: %d, got: %d", want, got)
-	}
-
-	wantTableBet := 1
-	gotTableBet := player.HandBet
-
-	if wantTableBet != gotTableBet {
-		t.Fatalf("wanted: %d, got: %d", wantTableBet, gotTableBet)
-	}
-
 	player.Payout()
 
-	wantPayout := 101
-	gotPayout := player.Cash
-
-	if wantTableBet != gotTableBet {
-		t.Fatalf("wanted: %d, got: %d", wantPayout, gotPayout)
+	want := blackjack.Player{
+		HandBet: 0,
+		Cash:    101,
 	}
 
-	// wantWin := 2
-	// gotWin := player.HandBet
+	got := player
+
+	if !cmp.Equal(want, got) {
+		cmp.Diff(want, got)
+	}
+
+	type testCase struct {
+		bet     int
+		cash    int
+		want    int
+		outcome blackjack.Outcome
+	}
+	tcs := []testCase{
+		{bet: 1, cash: 99, want: 101, outcome: blackjack.OutcomeWin},
+		{bet: 1, cash: 99, want: 99, outcome: blackjack.OutcomeLose},
+		{bet: 1, cash: 99, want: 100, outcome: blackjack.OutcomeTie},
+		{bet: 1, cash: 99, want: 102, outcome: blackjack.OutcomeBlackjack},
+	}
+
+	for _, tc := range tcs {
+		p := blackjack.Player{
+			HandBet:     tc.bet,
+			Cash:        tc.cash,
+			HandOutcome: tc.outcome,
+		}
+
+		p.Payout()
+		want := tc.want
+		got := p.Cash
+
+		if want != got {
+			t.Fatalf("wanted Cash: %d, got Cash:%d for %q", want, got, tc.outcome.String())
+		}
+	}
 
 }

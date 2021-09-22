@@ -49,15 +49,9 @@ func TestNewBlackjackGame(t *testing.T) {
 	}
 
 	g.PlayerSetup(output, input)
-	for g.Continue() {
-		g.Betting()
-		g.Players = g.RemoveQuitPlayers()
-		if len(g.Players) == 0 {
-			blackjack.RunCLI()
-		}
-		g.ResetPlayers()
-		g.Start()
-	}
+
+	g.ResetPlayers()
+	g.Start()
 
 	want := blackjack.Record{
 		Win:         1,
@@ -164,7 +158,7 @@ func TestRemoveQuitPlayers(t *testing.T) {
 	t.Parallel()
 
 	g := blackjack.Game{
-		Players: []blackjack.Player{
+		Players: []*blackjack.Player{
 			{Action: blackjack.ActionStand},
 			{Action: blackjack.ActionQuit},
 			{Action: blackjack.ActionQuit},
@@ -183,36 +177,47 @@ func TestRemoveQuitPlayers(t *testing.T) {
 
 }
 
-func TestPlayerQuit(t *testing.T) {
+func TestBetting(t *testing.T) {
 	t.Parallel()
 
-	g, err := blackjack.NewBlackjackGame()
+	output := &bytes.Buffer{}
+	input := strings.NewReader("1")
+
+	player := blackjack.Player{
+		Bet:         blackjack.HumanBet,
+		Cash:        100,
+		HandOutcome: blackjack.OutcomeWin,
+	}
+
+	err := player.Bet(output, input, &player)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	player := blackjack.Player{
-		Name:   "quitter",
-		Bet:    blackjack.HumanBet,
-		Action: blackjack.ActionQuit,
-	}
-
-	g.AddPlayer(player)
-
-	player2 := blackjack.Player{
-		Name: "playon",
-		Bet:  blackjack.HumanBet,
-	}
-
-	g.AddPlayer(player2)
-
-	g.Players[0].Quit()
-
-	want := 1
-	got := len(g.Players)
+	want := 99
+	got := player.Cash
 
 	if want != got {
 		t.Fatalf("wanted: %d, got: %d", want, got)
 	}
+
+	wantTableBet := 1
+	gotTableBet := player.HandBet
+
+	if wantTableBet != gotTableBet {
+		t.Fatalf("wanted: %d, got: %d", wantTableBet, gotTableBet)
+	}
+
+	player.Payout()
+
+	wantPayout := 101
+	gotPayout := player.Cash
+
+	if wantTableBet != gotTableBet {
+		t.Fatalf("wanted: %d, got: %d", wantPayout, gotPayout)
+	}
+
+	// wantWin := 2
+	// gotWin := player.HandBet
 
 }

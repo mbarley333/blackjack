@@ -93,7 +93,7 @@ var PlayerTypeBetMap = map[PlayerType]func(io.Writer, io.Reader, *Player) error{
 
 type Game struct {
 	Players []*Player
-	Dealer  *Player
+	Dealer  Player
 	Shoe    cards.Deck
 	Random  rand.Rand
 	output  io.Writer
@@ -160,8 +160,8 @@ func RunCLI() {
 	fmt.Println("No players left in game.  Exiting...")
 }
 
-func (g *Game) AddPlayer(player Player) {
-	g.Players = append(g.Players, &player)
+func (g *Game) AddPlayer(player *Player) {
+	g.Players = append(g.Players, player)
 }
 
 func (g *Game) PlayerSetup(output io.Writer, input io.Reader) error {
@@ -180,7 +180,7 @@ func (g *Game) PlayerSetup(output io.Writer, input io.Reader) error {
 			return fmt.Errorf("unable to setup players, %s", err)
 		}
 
-		g.AddPlayer(player)
+		g.AddPlayer(&player)
 	}
 
 	return nil
@@ -205,6 +205,7 @@ func (g *Game) Betting() error {
 
 	var err error
 	for index := range g.Players {
+		g.Players[index].Balance(g.output)
 		err = g.Players[index].Bet(g.output, g.input, g.Players[index])
 		if err != nil {
 			return fmt.Errorf("unable to place bet for player: %s", g.Players[index].Name)
@@ -315,11 +316,6 @@ func (g *Game) Outcome(output io.Writer) {
 
 		g.Players[index].SetWinLoseTie(outcome)
 
-		// if g.Players[index].Logic == "a" && g.Players[index].AiHandsToPlay == g.Players[index].Record.HandsPlayed {
-
-		// 	g.Players[index].Action = ActionQuit
-		// }
-
 	}
 }
 
@@ -406,6 +402,16 @@ func (p Player) PlayerString() string {
 		builder.WriteString("[" + card.String() + "]")
 	}
 	return fmt.Sprint(p.Score()) + ": " + builder.String()
+}
+
+func (p Player) Balance(output io.Writer) {
+	str := []string{
+		p.Name,
+		" has $",
+		strconv.Itoa(p.Cash),
+	}
+
+	fmt.Fprintln(output, strings.Join(str, ""))
 }
 
 func (p Player) DealerString() string {
@@ -504,6 +510,7 @@ func NewPlayer(output io.Writer, input io.Reader) (Player, error) {
 		AiHandsToPlay: aiHands,
 		Logic:         strings.ToLower(playerTypeInput),
 		Bet:           playerTypeBet,
+		Cash:          100,
 	}
 
 	return player, nil

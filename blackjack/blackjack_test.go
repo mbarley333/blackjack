@@ -111,19 +111,19 @@ func TestMultiPlayers(t *testing.T) {
 		Name:   "Planty",
 		Action: blackjack.ActionStand,
 	}
-	g.AddPlayer(player)
+	g.AddPlayer(&player)
 
 	player2 := blackjack.Player{
 		Name:   "Kevin",
 		Action: blackjack.ActionStand,
 	}
-	g.AddPlayer(player2)
+	g.AddPlayer(&player2)
 
 	player3 := blackjack.Player{
 		Name:   "Donald",
 		Action: blackjack.ActionHit,
 	}
-	g.AddPlayer(player3)
+	g.AddPlayer(&player3)
 
 	g.Start()
 
@@ -240,4 +240,26 @@ func TestPayout(t *testing.T) {
 			t.Fatalf("wanted Cash: %d, got Cash:%d for %q", want, got, tc.outcome.String())
 		}
 	}
+}
+
+func TestPlayerCash(t *testing.T) {
+	t.Parallel()
+
+	output := &bytes.Buffer{}
+
+	p := blackjack.Player{
+		Name: "Planty",
+		Cash: 100,
+	}
+
+	p.Balance(output)
+
+	want := "Planty has $100\n"
+
+	got := output.String()
+
+	if want != got {
+		t.Fatalf("wanted: %q, got: %q", want, got)
+	}
+
 }

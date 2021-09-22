@@ -374,7 +374,7 @@ func (p *Player) Payout() {
 		p.Cash += p.HandBet
 		p.HandBet = 0
 	} else if p.HandOutcome == OutcomeBlackjack {
-		p.HandBet = p.HandBet * 2
+		p.HandBet += 2 * p.HandBet
 		p.Cash += p.HandBet
 		p.HandBet = 0
 	}

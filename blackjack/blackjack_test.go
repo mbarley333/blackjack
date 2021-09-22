@@ -207,6 +207,11 @@ func TestBetting(t *testing.T) {
 		cmp.Diff(want, got)
 	}
 
+}
+
+func TestPayout(t *testing.T) {
+	t.Parallel()
+
 	type testCase struct {
 		bet     int
 		cash    int
@@ -235,5 +240,4 @@ func TestBetting(t *testing.T) {
 			t.Fatalf("wanted Cash: %d, got Cash:%d for %q", want, got, tc.outcome.String())
 		}
 	}
-
 }

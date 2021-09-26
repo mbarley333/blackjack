@@ -73,7 +73,7 @@ var BalanceReportMap = map[Outcome]string{
 	OutcomeBlackjack: " won $",
 	OutcomeWin:       " won $",
 	OutcomeLose:      " lost $",
-	OutcomeTie:       " ties",
+	OutcomeTie:       " push",
 	OutcomeBust:      " lost $",
 }
 
@@ -159,7 +159,7 @@ func RunCLI() {
 
 	g.PlayerSetup(g.output, g.input)
 
-	for g.Continue() {
+	for g.PlayAgain() {
 
 		g.ResetPlayers()
 		g.Start()
@@ -194,7 +194,7 @@ func (g *Game) PlayerSetup(output io.Writer, input io.Reader) error {
 	return nil
 }
 
-func (g *Game) Continue() bool {
+func (g *Game) PlayAgain() bool {
 
 	g.Betting()
 

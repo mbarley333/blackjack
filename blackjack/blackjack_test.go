@@ -64,7 +64,7 @@ func TestNewBlackjackGame(t *testing.T) {
 	}
 
 	wantReport := "************** Player Win-Lose-Tie Report **************\nPlayer won: 1, lost: 0 and tied: 0\n"
-	gotReport := g.Players[0].Record.String()
+	gotReport := g.Players[0].Record.RecordString()
 
 	if wantReport != gotReport {
 		t.Fatalf("want: %q, got: %q", wantReport, gotReport)
@@ -213,31 +213,37 @@ func TestPayout(t *testing.T) {
 	t.Parallel()
 
 	type testCase struct {
-		bet     int
-		cash    int
-		want    int
-		outcome blackjack.Outcome
+		bet        int
+		cash       int
+		outcome    blackjack.Outcome
+		handPayout int
 	}
 	tcs := []testCase{
-		{bet: 1, cash: 99, want: 101, outcome: blackjack.OutcomeWin},
-		{bet: 1, cash: 99, want: 99, outcome: blackjack.OutcomeLose},
-		{bet: 1, cash: 99, want: 100, outcome: blackjack.OutcomeTie},
-		{bet: 1, cash: 99, want: 102, outcome: blackjack.OutcomeBlackjack},
+		{bet: 1, cash: 101, outcome: blackjack.OutcomeWin, handPayout: 1},
+		{bet: 1, cash: 99, outcome: blackjack.OutcomeLose, handPayout: -1},
+		{bet: 1, cash: 100, outcome: blackjack.OutcomeTie, handPayout: 0},
+		{bet: 1, cash: 102, outcome: blackjack.OutcomeBlackjack, handPayout: 2},
 	}
 
 	for _, tc := range tcs {
-		p := blackjack.Player{
+		want := blackjack.Player{
 			HandBet:     tc.bet,
 			Cash:        tc.cash,
+			HandOutcome: tc.outcome,
+			HandPayout:  tc.handPayout,
+		}
+
+		p := blackjack.Player{
+			Cash:        100,
+			HandBet:     tc.bet,
 			HandOutcome: tc.outcome,
 		}
 
 		p.Payout()
-		want := tc.want
-		got := p.Cash
+		got := p
 
-		if want != got {
-			t.Fatalf("wanted Cash: %d, got Cash:%d for %q", want, got, tc.outcome.String())
+		if !cmp.Equal(want, got) {
+			cmp.Diff(want, got)
 		}
 	}
 }
@@ -248,18 +254,50 @@ func TestPlayerCash(t *testing.T) {
 	output := &bytes.Buffer{}
 
 	p := blackjack.Player{
-		Name: "Planty",
-		Cash: 100,
+		Name:        "Planty",
+		Cash:        100,
+		HandOutcome: blackjack.OutcomeWin,
+		HandPayout:  1,
 	}
 
-	p.Balance(output)
+	p.OutcomeReport(output)
 
-	want := "Planty has $100\n"
+	want := "Planty won $1.  Cash available: $100\n"
 
 	got := output.String()
 
 	if want != got {
 		t.Fatalf("wanted: %q, got: %q", want, got)
+	}
+
+}
+
+func TestPlayerBroke(t *testing.T) {
+	t.Parallel()
+
+	g, err := blackjack.NewBlackjackGame()
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	p := &blackjack.Player{
+		Name:        "Planty",
+		HandBet:     1,
+		Cash:        0,
+		HandOutcome: blackjack.OutcomeLose,
+	}
+
+	g.AddPlayer(p)
+
+	p.Broke()
+
+	want := blackjack.ActionQuit
+
+	got := p.Action
+
+	if want != got {
+		t.Fatalf("want: %q, got: %q", want.String(), got.String())
 	}
 
 }

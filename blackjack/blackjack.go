@@ -69,6 +69,14 @@ var ReportMap = map[Outcome]string{
 	OutcomeBust:      "***** Bust!  Player loses *****",
 }
 
+var BalanceReportMap = map[Outcome]string{
+	OutcomeBlackjack: " won $",
+	OutcomeWin:       " won $",
+	OutcomeLose:      " lost $",
+	OutcomeTie:       " ties",
+	OutcomeBust:      " lost $",
+}
+
 type PlayerType int
 
 const (
@@ -205,7 +213,7 @@ func (g *Game) Betting() error {
 
 	var err error
 	for index := range g.Players {
-		g.Players[index].Balance(g.output)
+
 		err = g.Players[index].Bet(g.output, g.input, g.Players[index])
 		if err != nil {
 			return fmt.Errorf("unable to place bet for player: %s", g.Players[index].Name)
@@ -316,7 +324,15 @@ func (g *Game) Outcome(output io.Writer) {
 
 		g.Players[index].SetWinLoseTie(outcome)
 
+		g.Players[index].Payout()
+
+		g.Players[index].Broke()
+
+		g.Players[index].OutcomeReport(g.output)
+
 	}
+
+	g.RemoveQuitPlayers()
 }
 
 func (g *Game) ResetPlayers() {
@@ -356,24 +372,34 @@ type Player struct {
 	Logic         string
 	Cash          int
 	HandBet       int
+	HandPayout    int
 }
 
 func (p *Player) Payout() {
 
 	if p.HandOutcome == OutcomeWin {
-		p.HandBet += p.HandBet
-		p.Cash += p.HandBet
+		p.HandPayout = p.HandBet
+		p.Cash += p.HandBet + p.HandPayout
 		p.HandBet = 0
 	} else if p.HandOutcome == OutcomeLose || p.HandOutcome == OutcomeBust {
+		p.HandPayout = -1 * p.HandBet
 		p.HandBet = 0
 	} else if p.HandOutcome == OutcomeTie {
+		p.HandPayout = 0
 		p.Cash += p.HandBet
 		p.HandBet = 0
 	} else if p.HandOutcome == OutcomeBlackjack {
-		p.HandBet += 2 * p.HandBet
-		p.Cash += p.HandBet
+		p.HandPayout = 2 * p.HandBet
+		p.Cash += p.HandBet + p.HandPayout
 		p.HandBet = 0
 	}
+}
+
+func (p *Player) Broke() {
+	if p.Cash == 0 {
+		p.Action = ActionQuit
+	}
+
 }
 
 func (p Player) Continue() bool {
@@ -404,10 +430,20 @@ func (p Player) PlayerString() string {
 	return fmt.Sprint(p.Score()) + ": " + builder.String()
 }
 
-func (p Player) Balance(output io.Writer) {
+func (p *Player) OutcomeReport(output io.Writer) {
+
+	var payout string
+	if p.HandOutcome == OutcomeTie {
+		payout = ""
+	} else {
+		payout = strconv.Itoa(absInt(p.HandPayout))
+	}
+
 	str := []string{
 		p.Name,
-		" has $",
+		BalanceReportMap[p.HandOutcome],
+		payout,
+		".  Cash available: $",
 		strconv.Itoa(p.Cash),
 	}
 
@@ -439,42 +475,6 @@ func (p Player) MinScore() int {
 		score += min(int(c.Rank), 10)
 	}
 	return score
-}
-
-type Record struct {
-	Win         int
-	Lose        int
-	Tie         int
-	HandsPlayed int
-}
-
-func (r Record) String() string {
-
-	str := []string{
-		"************** Player Win-Lose-Tie Report **************\nPlayer won: ",
-		strconv.Itoa(r.Win),
-		", lost: ",
-		strconv.Itoa(r.Lose),
-		" and tied: ",
-		strconv.Itoa(r.Tie),
-		"\n",
-	}
-
-	return strings.Join(str, "")
-}
-
-type Hand struct {
-	Cards   []cards.Card
-	Bet     int
-	Action  Action
-	Outcome Outcome
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }
 
 func NewPlayer(output io.Writer, input io.Reader) (Player, error) {
@@ -514,6 +514,53 @@ func NewPlayer(output io.Writer, input io.Reader) (Player, error) {
 	}
 
 	return player, nil
+}
+
+type Record struct {
+	Win         int
+	Lose        int
+	Tie         int
+	HandsPlayed int
+}
+
+func (r Record) RecordString() string {
+
+	str := []string{
+		"************** Player Win-Lose-Tie Report **************\nPlayer won: ",
+		strconv.Itoa(r.Win),
+		", lost: ",
+		strconv.Itoa(r.Lose),
+		" and tied: ",
+		strconv.Itoa(r.Tie),
+		"\n",
+	}
+
+	return strings.Join(str, "")
+}
+
+type Hand struct {
+	Cards   []cards.Card
+	Bet     int
+	Action  Action
+	Outcome Outcome
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func absInt(x int) int {
+	return absDiffInt(x, 0)
+}
+
+func absDiffInt(x, y int) int {
+	if x < y {
+		return y - x
+	}
+	return x - y
 }
 
 func GetHumanAction(output io.Writer, input io.Reader) Action {

@@ -342,6 +342,8 @@ func (g *Game) ResetPlayers() {
 		g.Players[index].Hand = []cards.Card{}
 		g.Players[index].Action = None
 		g.Players[index].HandOutcome = OutcomeNone
+		g.Players[index].HandBet = 0
+		g.Players[index].HandPayout = 0
 	}
 	g.Dealer.Hand = []cards.Card{}
 

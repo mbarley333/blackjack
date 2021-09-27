@@ -108,28 +108,30 @@ func TestMultiPlayers(t *testing.T) {
 	}
 
 	player := blackjack.Player{
-		Name:   "Planty",
-		Action: blackjack.ActionStand,
+		Name:    "Planty",
+		Action:  blackjack.ActionStand,
+		Cash:    99,
+		HandBet: 1,
 	}
 	g.AddPlayer(&player)
 
 	player2 := blackjack.Player{
-		Name:   "Kevin",
-		Action: blackjack.ActionStand,
+		Name:    "Kevin",
+		Action:  blackjack.ActionStand,
+		Cash:    99,
+		HandBet: 1,
 	}
 	g.AddPlayer(&player2)
 
 	player3 := blackjack.Player{
-		Name:   "Donald",
-		Action: blackjack.ActionHit,
+		Name:    "Donald",
+		Action:  blackjack.ActionHit,
+		Cash:    99,
+		HandBet: 1,
 	}
 	g.AddPlayer(&player3)
 
 	g.Start()
-
-	output := &bytes.Buffer{}
-
-	g.Outcome(output)
 
 	wantPlayer := blackjack.OutcomeBlackjack
 	gotPlayer := g.Players[0].HandOutcome

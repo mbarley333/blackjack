@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"cards"
 	"cards/blackjack"
+	"math/rand"
 	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
 // what do we need to start a blackjack game game
@@ -42,6 +44,7 @@ func TestBlackjack(t *testing.T) {
 		blackjack.WithCustomDeck(deck),
 		blackjack.WithOutput(output),
 		blackjack.WithInput(input),
+		blackjack.WithIncomingDeck(false),
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -97,6 +100,7 @@ func TestNewBlackjackGame(t *testing.T) {
 		blackjack.WithCustomDeck(deck),
 		blackjack.WithOutput(output),
 		blackjack.WithInput(input),
+		blackjack.WithIncomingDeck(false),
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -156,6 +160,7 @@ func TestMultiPlayers(t *testing.T) {
 
 	g, err := blackjack.NewBlackjackGame(
 		blackjack.WithCustomDeck(deck),
+		blackjack.WithIncomingDeck(false),
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -354,6 +359,35 @@ func TestPlayerBroke(t *testing.T) {
 
 	if want != got {
 		t.Fatalf("want: %q, got: %q", want.String(), got.String())
+	}
+
+}
+
+func TestIncomingDeck(t *testing.T) {
+	t.Parallel()
+
+	output := &bytes.Buffer{}
+	random := rand.New(rand.NewSource(1))
+
+	g, err := blackjack.NewBlackjackGame(
+		blackjack.WithOutput(output),
+		blackjack.WithDeckCount(3),
+		blackjack.WithRandom(random),
+	)
+
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := g.Shoe
+	g.CardsDealt = 146
+
+	_ = g.Deal(output)
+
+	got := g.Shoe
+
+	if cmp.Equal(want, got, cmpopts.IgnoreUnexported(cards.Deck{})) {
+		t.Fatal("wanted a new deck, got old deck")
 	}
 
 }

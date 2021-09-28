@@ -8,6 +8,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type Action int
@@ -100,12 +101,17 @@ var PlayerTypeBetMap = map[PlayerType]func(io.Writer, io.Reader, *Player) error{
 }
 
 type Game struct {
-	Players []*Player
-	Dealer  Player
-	Shoe    cards.Deck
-	Random  rand.Rand
-	output  io.Writer
-	input   io.Reader
+	Players              []*Player
+	Dealer               Player
+	Shoe                 cards.Deck
+	Random               rand.Rand
+	output               io.Writer
+	input                io.Reader
+	IsIncomingDeck       bool
+	CardsDealt           int
+	IncomingDeckPosition int
+	DeckCount            int
+	random               *rand.Rand
 }
 
 type Option func(*Game) error
@@ -113,6 +119,7 @@ type Option func(*Game) error
 func WithCustomDeck(deck cards.Deck) Option {
 	return func(g *Game) error {
 		g.Shoe = deck
+		g.IsIncomingDeck = false
 		return nil
 	}
 }
@@ -131,20 +138,59 @@ func WithInput(input io.Reader) Option {
 	}
 }
 
+func WithIncomingDeck(r bool) Option {
+	return func(g *Game) error {
+		g.IsIncomingDeck = r
+		return nil
+	}
+}
+
+func WithDeckCount(d int) Option {
+	return func(g *Game) error {
+		g.DeckCount = d
+		return nil
+	}
+}
+
+func WithRandom(random *rand.Rand) Option {
+	return func(g *Game) error {
+		g.random = random
+		return nil
+	}
+}
+
 func NewBlackjackGame(opts ...Option) (*Game, error) {
 
-	deck := cards.NewDeck(
-		cards.WithNumberOfDecks(3),
-	)
-
 	game := &Game{
-		Shoe:   deck,
-		output: os.Stdout,
-		input:  os.Stdin,
+		output:         os.Stdout,
+		input:          os.Stdin,
+		IsIncomingDeck: true,
+		DeckCount:      3,
+		random:         rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
+
+	deck := cards.NewDeck(
+		cards.WithNumberOfDecks(game.DeckCount),
+	)
+	game.Shoe = deck
 
 	for _, o := range opts {
 		o(game)
+	}
+
+	if game.IsIncomingDeck {
+		// randomly determine number between 1 and 17 and
+		// covert to percent.  use percentage to figure out
+		// how many cards must be dealt before new incoming deck
+		max := 17
+		min := 1
+		random := game.random.Intn(max+min) + min
+		frandom := float64(random)
+		count := len(game.Shoe.Cards)
+		fcount := float64(count)
+		val := int(fcount * (frandom * 0.01))
+
+		game.IncomingDeckPosition = count - val
 	}
 
 	return game, nil
@@ -246,7 +292,7 @@ func (g *Game) Start() {
 			}
 			if g.Players[index].Action == ActionHit {
 
-				card := g.Deal()
+				card := g.Deal(g.output)
 				g.Players[index].Hand = append(g.Players[index].Hand, card)
 				g.Players[index].Action = None
 
@@ -273,7 +319,7 @@ func (g *Game) DealerPlay() {
 	fmt.Fprintln(g.output, "****** DEALER'S TURN ******")
 
 	for g.Dealer.Score() <= 16 || (g.Dealer.Score() == 17 && g.Dealer.MinScore() != 17) {
-		card := g.Deal()
+		card := g.Deal(g.output)
 		g.Dealer.Hand = append(g.Dealer.Hand, card)
 	}
 	g.Dealer.Action = ActionStand
@@ -285,21 +331,34 @@ func (g Game) ShowPlayerCards(output io.Writer) {
 	}
 }
 
-func (g *Game) Deal() cards.Card {
+func (g *Game) Deal(output io.Writer) cards.Card {
 
 	var card cards.Card
 	card, g.Shoe.Cards = g.Shoe.Cards[0], g.Shoe.Cards[1:]
-	g.Shoe.Cards = append(g.Shoe.Cards, card)
+	g.CardsDealt += 1
+
+	if g.IsIncomingDeck {
+		if g.CardsDealt >= g.IncomingDeckPosition {
+			fmt.Fprintln(output, "\n******************************")
+			fmt.Fprintln(output, "***** New Deck Incoming ******")
+			fmt.Fprintln(output, "\n******************************")
+			g.Shoe = g.IncomingDeck()
+			g.CardsDealt = 0
+		}
+
+	} else {
+		g.Shoe.Cards = append(g.Shoe.Cards, card)
+	}
 	return card
 }
 
 func (g *Game) OpeningDeal() {
 	for i := 0; i < 2; i++ {
 		for index := range g.Players {
-			card := g.Deal()
+			card := g.Deal(g.output)
 			g.Players[index].Hand = append(g.Players[index].Hand, card)
 		}
-		card := g.Deal()
+		card := g.Deal(g.output)
 		g.Dealer.Hand = append(g.Dealer.Hand, card)
 	}
 }
@@ -360,6 +419,15 @@ func (g *Game) RemoveQuitPlayers() []*Player {
 	}
 
 	return newPlayers
+}
+
+func (g Game) IncomingDeck() cards.Deck {
+	deck := cards.NewDeck(
+		cards.WithNumberOfDecks(g.DeckCount),
+	)
+
+	return deck
+
 }
 
 type Player struct {

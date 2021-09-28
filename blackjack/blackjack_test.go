@@ -4,24 +4,81 @@ import (
 	"bytes"
 	"cards"
 	"cards/blackjack"
+	"math/rand"
 	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 )
+
+// what do we need to start a blackjack game game
+// we need a game server layer.  NewGame func return *Game
+// we need to deal cards from a deck.  Deal func
+// we need to control the cards dealt in order to test.  Pass in stacked deck
+// we need a player and a dealer.  add player and dealer to Game
+// add deck to Game
+// deal cards to player and dealer
+// dealer logic for hit/stand
+// player prompt for hit/stand
+
+func TestBlackjack(t *testing.T) {
+	t.Parallel()
+
+	output := &bytes.Buffer{}
+	input := strings.NewReader("b\n1\ns\nq")
+
+	stack := []cards.Card{
+		{Rank: cards.Queen, Suit: cards.Club},
+		{Rank: cards.Three, Suit: cards.Club},
+		{Rank: cards.Ten, Suit: cards.Club},
+		{Rank: cards.Jack, Suit: cards.Club},
+		{Rank: cards.King, Suit: cards.Club},
+	}
+
+	deck := cards.Deck{
+		Cards: stack,
+	}
+
+	g, err := blackjack.NewBlackjackGame(
+		blackjack.WithCustomDeck(deck),
+		blackjack.WithOutput(output),
+		blackjack.WithInput(input),
+		blackjack.WithIncomingDeck(false),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	p := &blackjack.Player{
+		Name:   "j",
+		Cash:   100,
+		Decide: blackjack.HumanAction,
+		Bet:    blackjack.HumanBet,
+	}
+
+	g.AddPlayer(p)
+
+	g.ResetPlayers()
+
+	g.Betting()
+
+	g.Players = g.RemoveQuitPlayers()
+
+	g.Start()
+
+	want := 101
+
+	got := g.Players[0].Cash
+
+	if want != got {
+		t.Fatalf("want: %d, got: %d", want, got)
+	}
+
+}
 
 func TestNewBlackjackGame(t *testing.T) {
 	t.Parallel()
-
-	// what do we need to start a blackjack game game
-	// we need a game server layer.  NewGame func return *Game
-	// we need to deal cards from a deck.  Deal func
-	// we need to control the cards dealt in order to test.  Pass in stacked deck
-	// we need a player and a dealer.  add player and dealer to Game
-	// add deck to Game
-	// deal cards to player and dealer
-	// dealer logic for hit/stand
-	// player prompt for hit/stand
 
 	stack := []cards.Card{
 		{Rank: cards.Ace, Suit: cards.Club},
@@ -43,6 +100,7 @@ func TestNewBlackjackGame(t *testing.T) {
 		blackjack.WithCustomDeck(deck),
 		blackjack.WithOutput(output),
 		blackjack.WithInput(input),
+		blackjack.WithIncomingDeck(false),
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -102,6 +160,7 @@ func TestMultiPlayers(t *testing.T) {
 
 	g, err := blackjack.NewBlackjackGame(
 		blackjack.WithCustomDeck(deck),
+		blackjack.WithIncomingDeck(false),
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -304,56 +363,31 @@ func TestPlayerBroke(t *testing.T) {
 
 }
 
-func TestDealerBustPlayerWinsZero(t *testing.T) {
+func TestIncomingDeck(t *testing.T) {
 	t.Parallel()
 
 	output := &bytes.Buffer{}
-	input := strings.NewReader("b\n1\ns\nq")
-
-	stack := []cards.Card{
-		{Rank: cards.Queen, Suit: cards.Club},
-		{Rank: cards.Three, Suit: cards.Club},
-		{Rank: cards.Ten, Suit: cards.Club},
-		{Rank: cards.Jack, Suit: cards.Club},
-		{Rank: cards.King, Suit: cards.Club},
-	}
-
-	deck := cards.Deck{
-		Cards: stack,
-	}
+	random := rand.New(rand.NewSource(1))
 
 	g, err := blackjack.NewBlackjackGame(
-		blackjack.WithCustomDeck(deck),
 		blackjack.WithOutput(output),
-		blackjack.WithInput(input),
+		blackjack.WithDeckCount(3),
+		blackjack.WithRandom(random),
 	)
+
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	p := &blackjack.Player{
-		Name:   "j",
-		Cash:   100,
-		Decide: blackjack.HumanAction,
-		Bet:    blackjack.HumanBet,
-	}
+	want := g.Shoe
+	g.CardsDealt = 146
 
-	g.AddPlayer(p)
+	_ = g.Deal(output)
 
-	g.ResetPlayers()
+	got := g.Shoe
 
-	g.Betting()
-
-	g.Players = g.RemoveQuitPlayers()
-
-	g.Start()
-
-	want := 101
-
-	got := g.Players[0].Cash
-
-	if want != got {
-		t.Fatalf("want: %d, got: %d", want, got)
+	if cmp.Equal(want, got, cmpopts.IgnoreUnexported(cards.Deck{})) {
+		t.Fatal("wanted a new deck, got old deck")
 	}
 
 }

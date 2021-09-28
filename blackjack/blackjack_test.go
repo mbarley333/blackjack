@@ -10,18 +10,72 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-func TestNewBlackjackGame(t *testing.T) {
+// what do we need to start a blackjack game game
+// we need a game server layer.  NewGame func return *Game
+// we need to deal cards from a deck.  Deal func
+// we need to control the cards dealt in order to test.  Pass in stacked deck
+// we need a player and a dealer.  add player and dealer to Game
+// add deck to Game
+// deal cards to player and dealer
+// dealer logic for hit/stand
+// player prompt for hit/stand
+
+func TestBlackjack(t *testing.T) {
 	t.Parallel()
 
-	// what do we need to start a blackjack game game
-	// we need a game server layer.  NewGame func return *Game
-	// we need to deal cards from a deck.  Deal func
-	// we need to control the cards dealt in order to test.  Pass in stacked deck
-	// we need a player and a dealer.  add player and dealer to Game
-	// add deck to Game
-	// deal cards to player and dealer
-	// dealer logic for hit/stand
-	// player prompt for hit/stand
+	output := &bytes.Buffer{}
+	input := strings.NewReader("b\n1\ns\nq")
+
+	stack := []cards.Card{
+		{Rank: cards.Queen, Suit: cards.Club},
+		{Rank: cards.Three, Suit: cards.Club},
+		{Rank: cards.Ten, Suit: cards.Club},
+		{Rank: cards.Jack, Suit: cards.Club},
+		{Rank: cards.King, Suit: cards.Club},
+	}
+
+	deck := cards.Deck{
+		Cards: stack,
+	}
+
+	g, err := blackjack.NewBlackjackGame(
+		blackjack.WithCustomDeck(deck),
+		blackjack.WithOutput(output),
+		blackjack.WithInput(input),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	p := &blackjack.Player{
+		Name:   "j",
+		Cash:   100,
+		Decide: blackjack.HumanAction,
+		Bet:    blackjack.HumanBet,
+	}
+
+	g.AddPlayer(p)
+
+	g.ResetPlayers()
+
+	g.Betting()
+
+	g.Players = g.RemoveQuitPlayers()
+
+	g.Start()
+
+	want := 101
+
+	got := g.Players[0].Cash
+
+	if want != got {
+		t.Fatalf("want: %d, got: %d", want, got)
+	}
+
+}
+
+func TestNewBlackjackGame(t *testing.T) {
+	t.Parallel()
 
 	stack := []cards.Card{
 		{Rank: cards.Ace, Suit: cards.Club},
@@ -300,60 +354,6 @@ func TestPlayerBroke(t *testing.T) {
 
 	if want != got {
 		t.Fatalf("want: %q, got: %q", want.String(), got.String())
-	}
-
-}
-
-func TestDealerBustPlayerWinsZero(t *testing.T) {
-	t.Parallel()
-
-	output := &bytes.Buffer{}
-	input := strings.NewReader("b\n1\ns\nq")
-
-	stack := []cards.Card{
-		{Rank: cards.Queen, Suit: cards.Club},
-		{Rank: cards.Three, Suit: cards.Club},
-		{Rank: cards.Ten, Suit: cards.Club},
-		{Rank: cards.Jack, Suit: cards.Club},
-		{Rank: cards.King, Suit: cards.Club},
-	}
-
-	deck := cards.Deck{
-		Cards: stack,
-	}
-
-	g, err := blackjack.NewBlackjackGame(
-		blackjack.WithCustomDeck(deck),
-		blackjack.WithOutput(output),
-		blackjack.WithInput(input),
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	p := &blackjack.Player{
-		Name:   "j",
-		Cash:   100,
-		Decide: blackjack.HumanAction,
-		Bet:    blackjack.HumanBet,
-	}
-
-	g.AddPlayer(p)
-
-	g.ResetPlayers()
-
-	g.Betting()
-
-	g.Players = g.RemoveQuitPlayers()
-
-	g.Start()
-
-	want := 101
-
-	got := g.Players[0].Cash
-
-	if want != got {
-		t.Fatalf("want: %d, got: %d", want, got)
 	}
 
 }

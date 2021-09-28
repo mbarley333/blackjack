@@ -380,11 +380,8 @@ func TestIncomingDeck(t *testing.T) {
 	}
 
 	want := g.Shoe
-	g.CardsDealt = 146
 
-	_ = g.Deal(output)
-
-	got := g.Shoe
+	got := g.IncomingDeck()
 
 	if cmp.Equal(want, got, cmpopts.IgnoreUnexported(cards.Deck{})) {
 		t.Fatal("wanted a new deck, got old deck")

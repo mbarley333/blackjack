@@ -60,7 +60,7 @@ func TestNewBlackjackGame(t *testing.T) {
 	got := g.Players[0].Record
 
 	if !cmp.Equal(want, got) {
-		t.Errorf("want %v, got %v", want, got)
+		cmp.Diff(want, got)
 	}
 
 	wantReport := "************** Player Win-Lose-Tie Report **************\nPlayer won: 1, lost: 0 and tied: 0\n"
@@ -183,7 +183,7 @@ func TestBetting(t *testing.T) {
 	t.Parallel()
 
 	output := &bytes.Buffer{}
-	input := strings.NewReader("1")
+	input := strings.NewReader("b\n1")
 
 	player := blackjack.Player{
 		Bet:         blackjack.HumanBet,
@@ -300,6 +300,60 @@ func TestPlayerBroke(t *testing.T) {
 
 	if want != got {
 		t.Fatalf("want: %q, got: %q", want.String(), got.String())
+	}
+
+}
+
+func TestDealerBustPlayerWinsZero(t *testing.T) {
+	t.Parallel()
+
+	output := &bytes.Buffer{}
+	input := strings.NewReader("b\n1\ns\nq")
+
+	stack := []cards.Card{
+		{Rank: cards.Queen, Suit: cards.Club},
+		{Rank: cards.Three, Suit: cards.Club},
+		{Rank: cards.Ten, Suit: cards.Club},
+		{Rank: cards.Jack, Suit: cards.Club},
+		{Rank: cards.King, Suit: cards.Club},
+	}
+
+	deck := cards.Deck{
+		Cards: stack,
+	}
+
+	g, err := blackjack.NewBlackjackGame(
+		blackjack.WithCustomDeck(deck),
+		blackjack.WithOutput(output),
+		blackjack.WithInput(input),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	p := &blackjack.Player{
+		Name:   "j",
+		Cash:   100,
+		Decide: blackjack.HumanAction,
+		Bet:    blackjack.HumanBet,
+	}
+
+	g.AddPlayer(p)
+
+	g.ResetPlayers()
+
+	g.Betting()
+
+	g.Players = g.RemoveQuitPlayers()
+
+	g.Start()
+
+	want := 101
+
+	got := g.Players[0].Cash
+
+	if want != got {
+		t.Fatalf("want: %d, got: %d", want, got)
 	}
 
 }

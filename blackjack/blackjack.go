@@ -85,7 +85,7 @@ const (
 )
 
 var PlayerTypeMap = map[PlayerType]func(io.Writer, io.Reader) Action{
-	PlayerTypeHuman:       GetHumanAction,
+	PlayerTypeHuman:       HumanAction,
 	PlayerTypeAiStandOnly: GetAiActionStandOnly,
 }
 
@@ -162,6 +162,11 @@ func RunCLI() {
 	for g.PlayAgain() {
 
 		g.ResetPlayers()
+		g.Betting()
+		g.Players = g.RemoveQuitPlayers()
+		if len(g.Players) == 0 {
+			break
+		}
 		g.Start()
 	}
 
@@ -195,11 +200,6 @@ func (g *Game) PlayerSetup(output io.Writer, input io.Reader) error {
 }
 
 func (g *Game) PlayAgain() bool {
-
-	g.Betting()
-
-	// remove any players with the ActionQuit from the Players slice
-	g.Players = g.RemoveQuitPlayers()
 
 	for _, player := range g.Players {
 		if player.Action != ActionQuit {
@@ -240,7 +240,7 @@ func (g *Game) Start() {
 			g.Players[index].HandOutcome = OutcomeBlackjack
 		}
 
-		for g.Players[index].Continue() {
+		for g.Players[index].ChooseAction() {
 			if g.Players[index].Action == None {
 				g.Players[index].Action = g.Players[index].Decide(g.output, g.input)
 			}
@@ -328,7 +328,7 @@ func (g *Game) Outcome(output io.Writer) {
 
 		g.Players[index].Broke()
 
-		g.Players[index].OutcomeReport(g.output)
+		g.Players[index].OutcomeReport(output)
 
 	}
 
@@ -371,7 +371,6 @@ type Player struct {
 	Decide        func(io.Writer, io.Reader) Action
 	AiHandsToPlay int
 	Record        Record
-	Logic         string
 	Cash          int
 	HandBet       int
 	HandPayout    int
@@ -404,7 +403,7 @@ func (p *Player) Broke() {
 
 }
 
-func (p Player) Continue() bool {
+func (p Player) ChooseAction() bool {
 
 	return p.Action != ActionQuit && p.Action != ActionStand && p.HandOutcome != OutcomeBlackjack && p.HandOutcome != OutcomeBust
 }
@@ -510,7 +509,6 @@ func NewPlayer(output io.Writer, input io.Reader) (Player, error) {
 		Name:          name,
 		Decide:        playerType,
 		AiHandsToPlay: aiHands,
-		Logic:         strings.ToLower(playerTypeInput),
 		Bet:           playerTypeBet,
 		Cash:          100,
 	}
@@ -565,7 +563,7 @@ func absDiffInt(x, y int) int {
 	return x - y
 }
 
-func GetHumanAction(output io.Writer, input io.Reader) Action {
+func HumanAction(output io.Writer, input io.Reader) Action {
 
 	var answer string
 
@@ -583,19 +581,23 @@ func GetAiActionStandOnly(output io.Writer, input io.Reader) Action {
 func HumanBet(output io.Writer, input io.Reader, player *Player) error {
 
 	var answer string
+	var bet int = 0
 
 	fmt.Fprintln(output, "")
 	fmt.Fprintln(output, "****** BET or QUIT ******")
-	fmt.Fprintln(output, "Enter bet amount or (q)uit:")
 
-	fmt.Fscanln(input, &answer)
+	for answer != "b" && answer != "q" {
+		fmt.Fprintln(output, "Enter (b)et or (q)uit:")
+		fmt.Fscanln(input, &answer)
+	}
 
-	if strings.ToLower(answer) == "q" {
+	switch strings.ToLower(answer) {
+	case "q":
 		player.Action = ActionQuit
-	} else {
-		bet, err := strconv.Atoi(answer)
-		if err != nil {
-			return fmt.Errorf("unable to place bet, invalid value, %s", err)
+	case "b":
+		for bet < 1 || bet > player.Cash {
+			fmt.Fprintf(output, "Enter bet amount between 1 and %d: ", player.Cash)
+			fmt.Fscanln(input, &bet)
 		}
 		player.Cash -= bet
 		player.HandBet += bet
@@ -621,6 +623,9 @@ func AiBet(output io.Writer, input io.Reader, player *Player) error {
 // additional features
 // difficult to fake concreate...take interface instead
 // burn cards
+// 7. split
+// 6. Double down
+// 5. card counting
 // 4. basic strategy ai
 // 3. reshuffle
 // 2. betting - push outcome...just bet $10, handle no money player and dealer

@@ -182,13 +182,12 @@ func NewBlackjackGame(opts ...Option) (*Game, error) {
 		// randomly determine number between 1 and 17 and
 		// covert to percent.  use percentage to figure out
 		// how many cards must be dealt before new incoming deck
-		max := 17
-		min := 1
-		random := game.random.Intn(max+min) + min
-		frandom := float64(random)
+		max := 0.17
+		min := 0.01
+		random := min + rand.Float64()*(max-min)
 		count := len(game.Shoe.Cards)
 		fcount := float64(count)
-		val := int(fcount * (frandom * 0.01))
+		val := int(fcount * random)
 
 		game.IncomingDeckPosition = count - val
 	}

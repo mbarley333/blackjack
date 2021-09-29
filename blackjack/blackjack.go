@@ -695,15 +695,18 @@ func AiActionBasic(output io.Writer, input io.Reader, player *Player, dealerCard
 	dealerCardValue := ScoreDealerHoleCard(dealerCard)
 
 	var isSoft bool
-	if len(player.Hand) == 2 {
-		isSoft = true
+
+	for _, card := range player.Hand {
+		if card.Rank == cards.Ace {
+			isSoft = true
+		}
 	}
 
 	if handValue <= 11 {
 		action = ActionHit
-	} else if handValue <= 15 && isSoft {
+	} else if handValue <= 17 && isSoft {
 		action = ActionHit
-	} else if handValue >= 19 && isSoft {
+	} else if handValue >= 18 && isSoft {
 		action = ActionStand
 	} else if handValue >= 17 && handValue <= 21 {
 		action = ActionStand

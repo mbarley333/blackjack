@@ -94,7 +94,7 @@ func TestNewBlackjackGame(t *testing.T) {
 	}
 
 	output := &bytes.Buffer{}
-	input := strings.NewReader("1\nPlanty\na\n1")
+	input := strings.NewReader("1\nPlanty\na\ns\n1")
 
 	g, err := blackjack.NewBlackjackGame(
 		blackjack.WithCustomDeck(deck),
@@ -404,6 +404,12 @@ func TestAiBasicAction(t *testing.T) {
 	}
 	tcs := []testCase{
 		{
+			playerCards: []cards.Card{{Rank: cards.Ace, Suit: cards.Club}, {Rank: cards.Jack, Suit: cards.Club}},
+			dealerCard:  cards.Card{Rank: cards.Four, Suit: cards.Club},
+			action:      blackjack.ActionStand,
+			description: "Blackjack",
+		},
+		{
 			playerCards: []cards.Card{{Rank: cards.Five, Suit: cards.Club}, {Rank: cards.Three, Suit: cards.Club}},
 			dealerCard:  cards.Card{Rank: cards.Four, Suit: cards.Club},
 			action:      blackjack.ActionHit,
@@ -414,6 +420,36 @@ func TestAiBasicAction(t *testing.T) {
 			dealerCard:  cards.Card{Rank: cards.Four, Suit: cards.Club},
 			action:      blackjack.ActionHit,
 			description: "Soft 15 or less",
+		},
+		{
+			playerCards: []cards.Card{{Rank: cards.Queen, Suit: cards.Club}, {Rank: cards.Nine, Suit: cards.Club}},
+			dealerCard:  cards.Card{Rank: cards.Four, Suit: cards.Club},
+			action:      blackjack.ActionStand,
+			description: "Soft 19 or higher",
+		},
+		{
+			playerCards: []cards.Card{{Rank: cards.Ten, Suit: cards.Club}, {Rank: cards.Three, Suit: cards.Club}, {Rank: cards.Five, Suit: cards.Club}},
+			dealerCard:  cards.Card{Rank: cards.Four, Suit: cards.Club},
+			action:      blackjack.ActionStand,
+			description: "Hard 17 to 21",
+		},
+		{
+			playerCards: []cards.Card{{Rank: cards.Ten, Suit: cards.Club}, {Rank: cards.Three, Suit: cards.Club}, {Rank: cards.Two, Suit: cards.Club}},
+			dealerCard:  cards.Card{Rank: cards.Four, Suit: cards.Club},
+			action:      blackjack.ActionStand,
+			description: "Hard 12 to 16 w/ Dealer <= 6",
+		},
+		{
+			playerCards: []cards.Card{{Rank: cards.Six, Suit: cards.Club}, {Rank: cards.Two, Suit: cards.Club}, {Rank: cards.Four, Suit: cards.Club}},
+			dealerCard:  cards.Card{Rank: cards.Three, Suit: cards.Club},
+			action:      blackjack.ActionHit,
+			description: "Hard 12 w/ Dealer <= 3",
+		},
+		{
+			playerCards: []cards.Card{{Rank: cards.Ten, Suit: cards.Club}, {Rank: cards.Three, Suit: cards.Club}, {Rank: cards.Two, Suit: cards.Club}},
+			dealerCard:  cards.Card{Rank: cards.Seven, Suit: cards.Club},
+			action:      blackjack.ActionHit,
+			description: "Hard 12 to 16 w/ Dealer >= 7",
 		},
 	}
 
@@ -437,6 +473,31 @@ func TestAiBasicAction(t *testing.T) {
 		}
 		g.Players = []*blackjack.Player{}
 		g.Dealer.Hand = nil
+
+	}
+
+}
+
+func TestScoreDealerHoleCard(t *testing.T) {
+
+	type testCase struct {
+		card        cards.Card
+		score       int
+		description string
+	}
+	tcs := []testCase{
+		{card: cards.Card{Rank: cards.Ace, Suit: cards.Club}, score: 11, description: "Ace"},
+		{card: cards.Card{Rank: cards.King, Suit: cards.Club}, score: 10, description: "King"},
+		{card: cards.Card{Rank: cards.Three, Suit: cards.Club}, score: 3, description: "Three"},
+	}
+
+	for _, tc := range tcs {
+		want := tc.score
+		got := blackjack.ScoreDealerHoleCard(tc.card)
+
+		if want != got {
+			t.Fatalf("wanted: %d, got: %d", want, got)
+		}
 
 	}
 

@@ -334,7 +334,6 @@ func (g Game) IsDealerDraw() bool {
 	allNotBustOrBlackjack := false
 
 	for index := range g.Players {
-		fmt.Println("inner")
 		if g.Players[index].HandOutcome != OutcomeBust && g.Players[index].HandOutcome != OutcomeBlackjack {
 			allNotBustOrBlackjack = true
 		}

@@ -331,18 +331,18 @@ func (g *Game) DealerPlay() {
 func (g Game) IsDealerDraw() bool {
 
 	result := false
-	allNotBust := false
+	allNotBustOrBlackjack := false
 
 	for index := range g.Players {
 		fmt.Println("inner")
-		if g.Players[index].HandOutcome != OutcomeBust {
-			allNotBust = true
+		if g.Players[index].HandOutcome != OutcomeBust && g.Players[index].HandOutcome != OutcomeBlackjack {
+			allNotBustOrBlackjack = true
 		}
 	}
 
 	// verifies if game conditions warrant dealer drawing a card
 	if g.Dealer.Score() <= 16 || (g.Dealer.Score() == 17 && g.Dealer.MinScore() != 17) {
-		if allNotBust {
+		if allNotBustOrBlackjack {
 			result = true
 		}
 	}

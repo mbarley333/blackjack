@@ -524,10 +524,16 @@ func TestDealerAi(t *testing.T) {
 			description: "All Players Busted",
 		},
 		{
-			players:     []*blackjack.Player{{HandOutcome: blackjack.OutcomeNone}},
+			players:     []*blackjack.Player{{HandOutcome: blackjack.OutcomeNone}, {HandOutcome: blackjack.OutcomeBlackjack}},
 			dealerHand:  []cards.Card{{Rank: cards.Seven, Suit: cards.Club}, {Rank: cards.Seven, Suit: cards.Club}},
 			result:      true,
 			description: "All Players Not Busted",
+		},
+		{
+			players:     []*blackjack.Player{{HandOutcome: blackjack.OutcomeBlackjack}},
+			dealerHand:  []cards.Card{{Rank: cards.Seven, Suit: cards.Club}, {Rank: cards.Seven, Suit: cards.Club}},
+			result:      false,
+			description: "All Players Blackjack",
 		},
 	}
 

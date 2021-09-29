@@ -553,3 +553,51 @@ func TestDealerAi(t *testing.T) {
 	}
 
 }
+
+func TestDoubleDown(t *testing.T) {
+
+	stack := []cards.Card{
+		{Rank: cards.Six, Suit: cards.Club},
+		{Rank: cards.Four, Suit: cards.Club},
+		{Rank: cards.Four, Suit: cards.Club},
+		{Rank: cards.Jack, Suit: cards.Club},
+		{Rank: cards.Ace, Suit: cards.Club},
+		{Rank: cards.Ten, Suit: cards.Club},
+	}
+
+	deck := cards.Deck{
+		Cards: stack,
+	}
+	output := &bytes.Buffer{}
+	input := strings.NewReader("d\nq")
+	g, err := blackjack.NewBlackjackGame(
+		blackjack.WithCustomDeck(deck),
+		blackjack.WithIncomingDeck(false),
+		blackjack.WithOutput(output),
+		blackjack.WithInput(input),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	p := &blackjack.Player{
+		Name:    "planty",
+		HandBet: 1,
+		Cash:    100,
+		Decide:  blackjack.HumanAction,
+		Bet:     blackjack.HumanBet,
+	}
+
+	g.AddPlayer(p)
+
+	g.Start()
+
+	want := 104
+
+	got := g.Players[0].Cash
+
+	if want != got {
+		t.Fatalf("wanted: %d, got: %d", want, got)
+	}
+
+}

@@ -94,7 +94,7 @@ func TestNewBlackjackGame(t *testing.T) {
 	}
 
 	output := &bytes.Buffer{}
-	input := strings.NewReader("1\nPlanty\na\n1")
+	input := strings.NewReader("1\nPlanty\na\ns\n1")
 
 	g, err := blackjack.NewBlackjackGame(
 		blackjack.WithCustomDeck(deck),
@@ -380,14 +380,176 @@ func TestIncomingDeck(t *testing.T) {
 	}
 
 	want := g.Shoe
-	g.CardsDealt = 146
 
-	_ = g.Deal(output)
-
-	got := g.Shoe
+	got := g.IncomingDeck()
 
 	if cmp.Equal(want, got, cmpopts.IgnoreUnexported(cards.Deck{})) {
 		t.Fatal("wanted a new deck, got old deck")
+	}
+
+}
+
+func TestAiBasicAction(t *testing.T) {
+
+	g, err := blackjack.NewBlackjackGame()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	type testCase struct {
+		playerCards []cards.Card
+		dealerCard  cards.Card
+		action      blackjack.Action
+		description string
+	}
+	tcs := []testCase{
+		{
+			playerCards: []cards.Card{{Rank: cards.Ace, Suit: cards.Club}, {Rank: cards.Jack, Suit: cards.Club}},
+			dealerCard:  cards.Card{Rank: cards.Four, Suit: cards.Club},
+			action:      blackjack.ActionStand,
+			description: "Blackjack",
+		},
+		{
+			playerCards: []cards.Card{{Rank: cards.Five, Suit: cards.Club}, {Rank: cards.Three, Suit: cards.Club}},
+			dealerCard:  cards.Card{Rank: cards.Four, Suit: cards.Club},
+			action:      blackjack.ActionHit,
+			description: "Eleven or less",
+		},
+		{
+			playerCards: []cards.Card{{Rank: cards.Five, Suit: cards.Club}, {Rank: cards.Three, Suit: cards.Club}},
+			dealerCard:  cards.Card{Rank: cards.Four, Suit: cards.Club},
+			action:      blackjack.ActionHit,
+			description: "Soft 15 or less",
+		},
+		{
+			playerCards: []cards.Card{{Rank: cards.Queen, Suit: cards.Club}, {Rank: cards.Nine, Suit: cards.Club}},
+			dealerCard:  cards.Card{Rank: cards.Four, Suit: cards.Club},
+			action:      blackjack.ActionStand,
+			description: "Soft 19 or higher",
+		},
+		{
+			playerCards: []cards.Card{{Rank: cards.Ten, Suit: cards.Club}, {Rank: cards.Three, Suit: cards.Club}, {Rank: cards.Five, Suit: cards.Club}},
+			dealerCard:  cards.Card{Rank: cards.Four, Suit: cards.Club},
+			action:      blackjack.ActionStand,
+			description: "Hard 17 to 21",
+		},
+		{
+			playerCards: []cards.Card{{Rank: cards.Ten, Suit: cards.Club}, {Rank: cards.Three, Suit: cards.Club}, {Rank: cards.Two, Suit: cards.Club}},
+			dealerCard:  cards.Card{Rank: cards.Four, Suit: cards.Club},
+			action:      blackjack.ActionStand,
+			description: "Hard 12 to 16 w/ Dealer <= 6",
+		},
+		{
+			playerCards: []cards.Card{{Rank: cards.Six, Suit: cards.Club}, {Rank: cards.Two, Suit: cards.Club}, {Rank: cards.Four, Suit: cards.Club}},
+			dealerCard:  cards.Card{Rank: cards.Three, Suit: cards.Club},
+			action:      blackjack.ActionHit,
+			description: "Hard 12 w/ Dealer <= 3",
+		},
+		{
+			playerCards: []cards.Card{{Rank: cards.Ten, Suit: cards.Club}, {Rank: cards.Three, Suit: cards.Club}, {Rank: cards.Two, Suit: cards.Club}},
+			dealerCard:  cards.Card{Rank: cards.Seven, Suit: cards.Club},
+			action:      blackjack.ActionHit,
+			description: "Hard 12 to 16 w/ Dealer >= 7",
+		},
+	}
+
+	output := &bytes.Buffer{}
+	input := strings.NewReader("")
+
+	for _, tc := range tcs {
+		p := &blackjack.Player{
+			Hand:   tc.playerCards,
+			Decide: blackjack.AiActionBasic,
+		}
+		g.AddPlayer(p)
+		g.Dealer.Hand = append(g.Dealer.Hand, tc.dealerCard)
+
+		want := tc.action
+
+		got := g.Players[0].Decide(output, input, g.Players[0], g.Dealer.Hand[0])
+
+		if want != got {
+			t.Fatalf("%q: wanted: %q, got: %q", tc.description, want.String(), got.String())
+		}
+		g.Players = []*blackjack.Player{}
+		g.Dealer.Hand = nil
+
+	}
+
+}
+
+func TestScoreDealerHoleCard(t *testing.T) {
+
+	type testCase struct {
+		card        cards.Card
+		score       int
+		description string
+	}
+	tcs := []testCase{
+		{card: cards.Card{Rank: cards.Ace, Suit: cards.Club}, score: 11, description: "Ace"},
+		{card: cards.Card{Rank: cards.King, Suit: cards.Club}, score: 10, description: "King"},
+		{card: cards.Card{Rank: cards.Three, Suit: cards.Club}, score: 3, description: "Three"},
+	}
+
+	for _, tc := range tcs {
+		want := tc.score
+		got := blackjack.ScoreDealerHoleCard(tc.card)
+
+		if want != got {
+			t.Fatalf("wanted: %d, got: %d", want, got)
+		}
+
+	}
+
+}
+
+func TestDealerAi(t *testing.T) {
+
+	g, err := blackjack.NewBlackjackGame()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	type testCase struct {
+		players     []*blackjack.Player
+		dealerHand  []cards.Card
+		description string
+		result      bool
+	}
+	tcs := []testCase{
+		{
+			players:     []*blackjack.Player{{HandOutcome: blackjack.OutcomeBust}},
+			dealerHand:  []cards.Card{{Rank: cards.Seven, Suit: cards.Club}, {Rank: cards.Seven, Suit: cards.Club}},
+			result:      false,
+			description: "All Players Busted",
+		},
+		{
+			players:     []*blackjack.Player{{HandOutcome: blackjack.OutcomeNone}, {HandOutcome: blackjack.OutcomeBlackjack}},
+			dealerHand:  []cards.Card{{Rank: cards.Seven, Suit: cards.Club}, {Rank: cards.Seven, Suit: cards.Club}},
+			result:      true,
+			description: "All Players Not Busted",
+		},
+		{
+			players:     []*blackjack.Player{{HandOutcome: blackjack.OutcomeBlackjack}},
+			dealerHand:  []cards.Card{{Rank: cards.Seven, Suit: cards.Club}, {Rank: cards.Seven, Suit: cards.Club}},
+			result:      false,
+			description: "All Players Blackjack",
+		},
+	}
+
+	for _, tc := range tcs {
+
+		g.Players = tc.players
+		g.Dealer.Hand = tc.dealerHand
+		want := tc.result
+		got := g.IsDealerDraw()
+
+		if want != got {
+			t.Fatalf("%s: wanted: %v, got: %v", tc.description, want, got)
+		}
+		g.Players = nil
+		g.Dealer.Hand = nil
+
 	}
 
 }

@@ -83,21 +83,25 @@ type PlayerType int
 const (
 	PlayerTypeHuman PlayerType = iota
 	PlayerTypeAiStandOnly
+	PlayerTypeAiBasic
 )
 
-var PlayerTypeMap = map[PlayerType]func(io.Writer, io.Reader) Action{
+var PlayerTypeMap = map[PlayerType]func(io.Writer, io.Reader, *Player, cards.Card) Action{
 	PlayerTypeHuman:       HumanAction,
-	PlayerTypeAiStandOnly: GetAiActionStandOnly,
+	PlayerTypeAiStandOnly: AiActionStandOnly,
+	PlayerTypeAiBasic:     AiActionBasic,
 }
 
 var PlayerTypeInputMap = map[string]PlayerType{
 	"h": PlayerTypeHuman,
-	"a": PlayerTypeAiStandOnly,
+	"b": PlayerTypeAiBasic,
+	"s": PlayerTypeAiStandOnly,
 }
 
 var PlayerTypeBetMap = map[PlayerType]func(io.Writer, io.Reader, *Player) error{
 	PlayerTypeHuman:       HumanBet,
 	PlayerTypeAiStandOnly: AiBet,
+	PlayerTypeAiBasic:     AiBet,
 }
 
 type Game struct {
@@ -182,13 +186,12 @@ func NewBlackjackGame(opts ...Option) (*Game, error) {
 		// randomly determine number between 1 and 17 and
 		// covert to percent.  use percentage to figure out
 		// how many cards must be dealt before new incoming deck
-		max := 17
-		min := 1
-		random := game.random.Intn(max+min) + min
-		frandom := float64(random)
+		max := 0.17
+		min := 0.01
+		random := min + rand.Float64()*(max-min)
 		count := len(game.Shoe.Cards)
 		fcount := float64(count)
-		val := int(fcount * (frandom * 0.01))
+		val := int(fcount * random)
 
 		game.IncomingDeckPosition = count - val
 	}
@@ -288,7 +291,7 @@ func (g *Game) Start() {
 
 		for g.Players[index].ChooseAction() {
 			if g.Players[index].Action == None {
-				g.Players[index].Action = g.Players[index].Decide(g.output, g.input)
+				g.Players[index].Action = g.Players[index].Decide(g.output, g.input, g.Players[index], g.Dealer.Hand[0])
 			}
 			if g.Players[index].Action == ActionHit {
 
@@ -323,6 +326,27 @@ func (g *Game) DealerPlay() {
 		g.Dealer.Hand = append(g.Dealer.Hand, card)
 	}
 	g.Dealer.Action = ActionStand
+}
+
+func (g Game) IsDealerDraw() bool {
+
+	result := false
+	allNotBustOrBlackjack := false
+
+	for index := range g.Players {
+		if g.Players[index].HandOutcome != OutcomeBust && g.Players[index].HandOutcome != OutcomeBlackjack {
+			allNotBustOrBlackjack = true
+		}
+	}
+
+	// verifies if game conditions warrant dealer drawing a card
+	if g.Dealer.Score() <= 16 || (g.Dealer.Score() == 17 && g.Dealer.MinScore() != 17) {
+		if allNotBustOrBlackjack {
+			result = true
+		}
+	}
+
+	return result
 }
 
 func (g Game) ShowPlayerCards(output io.Writer) {
@@ -436,7 +460,7 @@ type Player struct {
 	Action        Action
 	HandOutcome   Outcome
 	Bet           func(io.Writer, io.Reader, *Player) error
-	Decide        func(io.Writer, io.Reader) Action
+	Decide        func(io.Writer, io.Reader, *Player, cards.Card) Action
 	AiHandsToPlay int
 	Record        Record
 	Cash          int
@@ -554,8 +578,17 @@ func NewPlayer(output io.Writer, input io.Reader) (Player, error) {
 	fmt.Fprintln(output, "Enter your name: ")
 	fmt.Fscanln(input, &name)
 
-	fmt.Fprintln(output, "Select (H)uman or (A)i for player type: ")
-	fmt.Fscanln(input, &playerTypeInput)
+	for strings.ToLower(playerTypeInput) != "h" && strings.ToLower(playerTypeInput) != "a" {
+		fmt.Fprintln(output, "Select (H)uman or (A)i")
+		fmt.Fscanln(input, &playerTypeInput)
+	}
+
+	if strings.ToLower(playerTypeInput) == "a" {
+		for strings.ToLower(playerTypeInput) != "b" && strings.ToLower(playerTypeInput) != "s" {
+			fmt.Fprintln(output, "Select AI Type: (B)asic or (S)tandOnly")
+			fmt.Fscanln(input, &playerTypeInput)
+		}
+	}
 
 	playerTypeInputValue := PlayerTypeInputMap[strings.ToLower(playerTypeInput)]
 	playerType := PlayerTypeMap[playerTypeInputValue]
@@ -631,7 +664,21 @@ func absDiffInt(x, y int) int {
 	return x - y
 }
 
-func HumanAction(output io.Writer, input io.Reader) Action {
+func ScoreDealerHoleCard(card cards.Card) int {
+
+	var score int
+	min := min(int(card.Rank), 10)
+
+	if card.Rank == cards.Ace {
+		score = min + 10
+	} else {
+		score = min
+	}
+
+	return score
+}
+
+func HumanAction(output io.Writer, input io.Reader, player *Player, dealerCard cards.Card) Action {
 
 	var answer string
 
@@ -641,7 +688,36 @@ func HumanAction(output io.Writer, input io.Reader) Action {
 	return ActionMap[strings.ToLower(answer)]
 }
 
-func GetAiActionStandOnly(output io.Writer, input io.Reader) Action {
+func AiActionBasic(output io.Writer, input io.Reader, player *Player, dealerCard cards.Card) Action {
+
+	var action Action
+	handValue := player.Score()
+	dealerCardValue := ScoreDealerHoleCard(dealerCard)
+
+	var isSoft bool
+	if len(player.Hand) == 2 {
+		isSoft = true
+	}
+
+	if handValue <= 11 {
+		action = ActionHit
+	} else if handValue <= 15 && isSoft {
+		action = ActionHit
+	} else if handValue >= 19 && isSoft {
+		action = ActionStand
+	} else if handValue >= 17 && handValue <= 21 {
+		action = ActionStand
+	} else if handValue == 12 && dealerCardValue <= 3 {
+		action = ActionHit
+	} else if handValue >= 12 && handValue <= 16 && dealerCardValue <= 6 {
+		action = ActionStand
+	} else if handValue >= 12 && handValue <= 16 && dealerCardValue >= 7 {
+		action = ActionHit
+	}
+	return action
+}
+
+func AiActionStandOnly(output io.Writer, input io.Reader, player *Player, dealerCard cards.Card) Action {
 
 	return ActionStand
 }
@@ -691,6 +767,8 @@ func AiBet(output io.Writer, input io.Reader, player *Player) error {
 // additional features
 // difficult to fake concreate...take interface instead
 // burn cards
+// 9. Surrender
+// 8. Even money
 // 7. split
 // 6. Double down
 // 5. card counting

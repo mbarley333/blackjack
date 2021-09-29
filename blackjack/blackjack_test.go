@@ -416,16 +416,16 @@ func TestAiBasicAction(t *testing.T) {
 			description: "Eleven or less",
 		},
 		{
-			playerCards: []cards.Card{{Rank: cards.Five, Suit: cards.Club}, {Rank: cards.Three, Suit: cards.Club}},
+			playerCards: []cards.Card{{Rank: cards.Ace, Suit: cards.Club}, {Rank: cards.Four, Suit: cards.Club}},
 			dealerCard:  cards.Card{Rank: cards.Four, Suit: cards.Club},
 			action:      blackjack.ActionHit,
 			description: "Soft 15 or less",
 		},
 		{
-			playerCards: []cards.Card{{Rank: cards.Queen, Suit: cards.Club}, {Rank: cards.Nine, Suit: cards.Club}},
+			playerCards: []cards.Card{{Rank: cards.Ace, Suit: cards.Club}, {Rank: cards.Seven, Suit: cards.Club}},
 			dealerCard:  cards.Card{Rank: cards.Four, Suit: cards.Club},
 			action:      blackjack.ActionStand,
-			description: "Soft 19 or higher",
+			description: "Soft 18 or higher",
 		},
 		{
 			playerCards: []cards.Card{{Rank: cards.Ten, Suit: cards.Club}, {Rank: cards.Three, Suit: cards.Club}, {Rank: cards.Five, Suit: cards.Club}},

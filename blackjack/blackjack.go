@@ -85,9 +85,9 @@ const (
 	PlayerTypeAiStandOnly
 )
 
-var PlayerTypeMap = map[PlayerType]func(io.Writer, io.Reader) Action{
+var PlayerTypeMap = map[PlayerType]func(io.Writer, io.Reader, *Player, cards.Card) Action{
 	PlayerTypeHuman:       HumanAction,
-	PlayerTypeAiStandOnly: GetAiActionStandOnly,
+	PlayerTypeAiStandOnly: AiActionStandOnly,
 }
 
 var PlayerTypeInputMap = map[string]PlayerType{
@@ -287,7 +287,7 @@ func (g *Game) Start() {
 
 		for g.Players[index].ChooseAction() {
 			if g.Players[index].Action == None {
-				g.Players[index].Action = g.Players[index].Decide(g.output, g.input)
+				g.Players[index].Action = g.Players[index].Decide(g.output, g.input, g.Players[index], g.Dealer.Hand[0])
 			}
 			if g.Players[index].Action == ActionHit {
 
@@ -435,7 +435,7 @@ type Player struct {
 	Action        Action
 	HandOutcome   Outcome
 	Bet           func(io.Writer, io.Reader, *Player) error
-	Decide        func(io.Writer, io.Reader) Action
+	Decide        func(io.Writer, io.Reader, *Player, cards.Card) Action
 	AiHandsToPlay int
 	Record        Record
 	Cash          int
@@ -630,7 +630,7 @@ func absDiffInt(x, y int) int {
 	return x - y
 }
 
-func HumanAction(output io.Writer, input io.Reader) Action {
+func HumanAction(output io.Writer, input io.Reader, player *Player, dealerCard cards.Card) Action {
 
 	var answer string
 
@@ -640,7 +640,26 @@ func HumanAction(output io.Writer, input io.Reader) Action {
 	return ActionMap[strings.ToLower(answer)]
 }
 
-func GetAiActionStandOnly(output io.Writer, input io.Reader) Action {
+func AiActionBasic(output io.Writer, input io.Reader, player *Player, dealerCard cards.Card) Action {
+
+	var action Action
+	handValue := player.Score()
+
+	var isSoft bool
+	if len(player.Hand) == 2 {
+		isSoft = true
+	}
+
+	if handValue <= 11 {
+		action = ActionHit
+	} else if handValue <= 15 && isSoft {
+		action = ActionHit
+	}
+
+	return action
+}
+
+func AiActionStandOnly(output io.Writer, input io.Reader, player *Player, dealerCard cards.Card) Action {
 
 	return ActionStand
 }
@@ -690,6 +709,8 @@ func AiBet(output io.Writer, input io.Reader, player *Player) error {
 // additional features
 // difficult to fake concreate...take interface instead
 // burn cards
+// 9. Surrender
+// 8. Even money
 // 7. split
 // 6. Double down
 // 5. card counting

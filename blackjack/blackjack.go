@@ -29,6 +29,7 @@ const (
 	ActionStand
 	ActionHit
 	ActionQuit
+	ActionDoubleDown
 )
 
 var ActionMap = map[string]Action{
@@ -36,6 +37,7 @@ var ActionMap = map[string]Action{
 	"s": ActionStand,
 	"q": ActionQuit,
 	"n": None,
+	"d": ActionDoubleDown,
 }
 
 type Outcome int
@@ -296,13 +298,11 @@ func (g *Game) Start() {
 			if g.Players[index].Action == ActionHit {
 
 				card := g.Deal(g.output)
-				g.Players[index].Hand = append(g.Players[index].Hand, card)
-				g.Players[index].Action = None
+				g.Players[index].Hit(g.output, card)
+			} else if g.Players[index].Action == ActionDoubleDown {
+				card := g.Deal(g.output)
+				g.Players[index].DoubleDown(g.output, card)
 
-				fmt.Fprintln(g.output, g.Players[index].Name+" has "+g.Players[index].PlayerString())
-				if g.Players[index].Score() > 21 {
-					g.Players[index].HandOutcome = OutcomeBust
-				}
 			}
 		}
 	}
@@ -310,8 +310,9 @@ func (g *Game) Start() {
 	fmt.Fprintln(g.output, "")
 	g.DealerPlay()
 
-	fmt.Fprintln(g.output, "Dealer has "+g.Dealer.PlayerString())
+	fmt.Fprintln(g.output, "Dealer"+g.Dealer.PlayerString())
 	g.ShowPlayerCards(g.output)
+
 	fmt.Fprintln(g.output, "")
 
 	g.Outcome(g.output)
@@ -351,7 +352,7 @@ func (g Game) IsDealerDraw() bool {
 
 func (g Game) ShowPlayerCards(output io.Writer) {
 	for _, player := range g.Players {
-		fmt.Fprintln(output, player.Name+" has "+player.PlayerString())
+		fmt.Fprintln(output, player.PlayerString())
 	}
 }
 
@@ -495,6 +496,27 @@ func (p *Player) Broke() {
 
 }
 
+func (p *Player) Hit(output io.Writer, card cards.Card) {
+
+	p.Hand = append(p.Hand, card)
+	p.Action = None
+
+	fmt.Fprintln(output, p.PlayerString())
+	if p.Score() > 21 {
+		p.HandOutcome = OutcomeBust
+	}
+
+}
+
+func (p *Player) DoubleDown(output io.Writer, card cards.Card) {
+
+	p.HandBet += p.HandBet
+	p.Hand = append(p.Hand, card)
+	fmt.Fprintln(output, p.PlayerString())
+	p.Action = ActionStand
+
+}
+
 func (p Player) ChooseAction() bool {
 
 	return p.Action != ActionQuit && p.Action != ActionStand && p.HandOutcome != OutcomeBlackjack && p.HandOutcome != OutcomeBust
@@ -517,10 +539,18 @@ func (p *Player) SetWinLoseTie(outcome Outcome) {
 func (p Player) PlayerString() string {
 
 	builder := strings.Builder{}
-	for _, card := range p.Hand {
-		builder.WriteString("[" + card.String() + "]")
+	var response string
+	if p.Action == ActionDoubleDown {
+		builder.WriteString(p.Name + " has ???: " + "[" + p.Hand[0].String() + "]" + "[" + p.Hand[1].String() + "]" + "[???]")
+		response = builder.String()
+	} else {
+		for _, card := range p.Hand {
+			builder.WriteString("[" + card.String() + "]")
+		}
+		str := []string{p.Name, " has ", fmt.Sprint(p.Score()), ": ", builder.String()}
+		response = strings.Join(str, "")
 	}
-	return fmt.Sprint(p.Score()) + ": " + builder.String()
+	return response
 }
 
 func (p *Player) OutcomeReport(output io.Writer) {
@@ -682,8 +712,18 @@ func HumanAction(output io.Writer, input io.Reader, player *Player, dealerCard c
 
 	var answer string
 
-	fmt.Fprintln(output, "Please choose (H)it or (S)tand")
-	fmt.Fscanln(input, &answer)
+	// check if double is possible
+	if player.HandBet > player.Cash {
+		for strings.ToLower(answer) != "h" && strings.ToLower(answer) != "s" {
+			fmt.Fprintln(output, "Please choose (H)it or (S)tand")
+			fmt.Fscanln(input, &answer)
+		}
+	} else {
+		for strings.ToLower(answer) != "h" && strings.ToLower(answer) != "d" && strings.ToLower(answer) != "s" {
+			fmt.Fprintln(output, "Please choose (H)it, (D)ouble or (S)tand")
+			fmt.Fscanln(input, &answer)
+		}
+	}
 
 	return ActionMap[strings.ToLower(answer)]
 }
@@ -702,12 +742,22 @@ func AiActionBasic(output io.Writer, input io.Reader, player *Player, dealerCard
 		}
 	}
 
-	if handValue <= 11 {
+	if (handValue == 10 && dealerCardValue < handValue || handValue == 11 && dealerCardValue < handValue) && player.Cash > player.HandBet {
+		action = ActionDoubleDown
+	} else if handValue == 9 && dealerCardValue >= 3 && dealerCardValue <= 6 && player.Cash > player.HandBet {
+		action = ActionDoubleDown
+	} else if handValue <= 11 {
 		action = ActionHit
-	} else if handValue <= 17 && isSoft {
+	} else if handValue <= 15 && isSoft {
 		action = ActionHit
-	} else if handValue >= 18 && isSoft {
+	} else if handValue >= 19 && isSoft {
 		action = ActionStand
+	} else if handValue >= 16 && handValue <= 18 && isSoft && dealerCardValue >= 7 {
+		action = ActionHit
+	} else if handValue >= 16 && handValue <= 18 && isSoft && dealerCardValue <= 6 && player.Cash > player.HandBet {
+		action = ActionDoubleDown
+	} else if handValue >= 16 && handValue <= 18 && isSoft && dealerCardValue <= 6 && player.Cash < player.HandBet {
+		action = ActionHit
 	} else if handValue >= 17 && handValue <= 21 {
 		action = ActionStand
 	} else if handValue == 12 && dealerCardValue <= 3 {

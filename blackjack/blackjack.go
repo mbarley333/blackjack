@@ -328,6 +328,28 @@ func (g *Game) DealerPlay() {
 	g.Dealer.Action = ActionStand
 }
 
+func (g Game) IsDealerDraw() bool {
+
+	result := false
+	allNotBust := false
+
+	for index := range g.Players {
+		fmt.Println("inner")
+		if g.Players[index].HandOutcome != OutcomeBust {
+			allNotBust = true
+		}
+	}
+
+	// verifies if game conditions warrant dealer drawing a card
+	if g.Dealer.Score() <= 16 || (g.Dealer.Score() == 17 && g.Dealer.MinScore() != 17) {
+		if allNotBust {
+			result = true
+		}
+	}
+
+	return result
+}
+
 func (g Game) ShowPlayerCards(output io.Writer) {
 	for _, player := range g.Players {
 		fmt.Fprintln(output, player.Name+" has "+player.PlayerString())

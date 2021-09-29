@@ -502,3 +502,48 @@ func TestScoreDealerHoleCard(t *testing.T) {
 	}
 
 }
+
+func TestDealerAi(t *testing.T) {
+
+	g, err := blackjack.NewBlackjackGame()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	type testCase struct {
+		players     []*blackjack.Player
+		dealerHand  []cards.Card
+		description string
+		result      bool
+	}
+	tcs := []testCase{
+		{
+			players:     []*blackjack.Player{{HandOutcome: blackjack.OutcomeBust}},
+			dealerHand:  []cards.Card{{Rank: cards.Seven, Suit: cards.Club}, {Rank: cards.Seven, Suit: cards.Club}},
+			result:      false,
+			description: "All Players Busted",
+		},
+		{
+			players:     []*blackjack.Player{{HandOutcome: blackjack.OutcomeNone}},
+			dealerHand:  []cards.Card{{Rank: cards.Seven, Suit: cards.Club}, {Rank: cards.Seven, Suit: cards.Club}},
+			result:      true,
+			description: "All Players Not Busted",
+		},
+	}
+
+	for _, tc := range tcs {
+
+		g.Players = tc.players
+		g.Dealer.Hand = tc.dealerHand
+		want := tc.result
+		got := g.IsDealerDraw()
+
+		if want != got {
+			t.Fatalf("%s: wanted: %v, got: %v", tc.description, want, got)
+		}
+		g.Players = nil
+		g.Dealer.Hand = nil
+
+	}
+
+}

@@ -467,6 +467,8 @@ type Player struct {
 	Cash          int
 	HandBet       int
 	HandPayout    int
+	Hands         []Hand
+	HandIndex     int
 }
 
 func (p *Player) Payout() {
@@ -670,6 +672,7 @@ func (r Record) RecordString() string {
 }
 
 type Hand struct {
+	Id      int
 	Cards   []cards.Card
 	Bet     int
 	Action  Action
@@ -754,6 +757,43 @@ func HumanBet(output io.Writer, input io.Reader, player *Player) error {
 	}
 
 	return nil
+
+}
+
+func (p Player) NextHandId() int {
+	return len(p.Hands) + 1
+}
+
+func (p Player) NewHand() Hand {
+	id := p.NextHandId()
+
+	hand := Hand{
+		Id: id,
+	}
+	return hand
+}
+
+func (p *Player) AddHand(hand Hand) {
+	p.Hands = append(p.Hands, hand)
+
+}
+
+func (p *Player) Split(card1, card2 cards.Card) {
+	hand := p.NewHand()
+	p.AddHand(hand)
+	indexNewHand := len(p.Hands) - 1
+
+	// take last card in original hand and append to the new split hand
+	// reset slice on original hand to only have the first card
+	var card cards.Card
+	card, p.Hands[p.HandIndex].Cards = p.Hands[p.HandIndex].Cards[1], p.Hands[p.HandIndex].Cards[0:0]
+	p.Hands[indexNewHand].Cards = append(p.Hands[indexNewHand].Cards, card)
+
+	p.Hands[indexNewHand].Bet = p.Hands[p.HandIndex].Bet
+	p.Cash -= p.Hands[p.HandIndex].Bet
+
+	p.Hands[indexNewHand].Cards = append(p.Hands[indexNewHand].Cards, card1)
+	p.Hands[indexNewHand].Cards = append(p.Hands[indexNewHand].Cards, card2)
 
 }
 

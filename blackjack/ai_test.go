@@ -154,8 +154,6 @@ func TestAiBasicAction(t *testing.T) {
 			Cash:   tc.cash,
 		}
 
-		//append(g.Dealer.Hand, tc.dealerCard)
-
 		want := tc.action
 
 		index := 0

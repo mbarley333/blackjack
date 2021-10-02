@@ -14,11 +14,12 @@ import (
 type Action int
 
 var ActionStringMap = map[Action]string{
+	None:             "Invalid Action",
 	ActionHit:        "Hit",
 	ActionStand:      "Stand",
 	ActionQuit:       "Quit",
-	None:             "Invalid Action",
 	ActionDoubleDown: "Double Down",
+	ActionSplit:      "Split",
 }
 
 func (a Action) String() string {
@@ -31,6 +32,7 @@ const (
 	ActionHit
 	ActionQuit
 	ActionDoubleDown
+	ActionSplit
 )
 
 var ActionMap = map[string]Action{
@@ -39,6 +41,7 @@ var ActionMap = map[string]Action{
 	"q": ActionQuit,
 	"n": None,
 	"d": ActionDoubleDown,
+	"p": ActionSplit,
 }
 
 type Outcome int
@@ -794,16 +797,25 @@ func HumanAction(output io.Writer, input io.Reader, player *Player, dealerCard c
 
 	var answer string
 
-	// check if double is possible
+	// check to see if not enough to split or double
 	if player.Hands[index].Bet > player.Cash {
 		for strings.ToLower(answer) != "h" && strings.ToLower(answer) != "s" {
 			fmt.Fprintln(output, "Please choose (H)it or (S)tand")
 			fmt.Fscanln(input, &answer)
 		}
 	} else {
-		for strings.ToLower(answer) != "h" && strings.ToLower(answer) != "d" && strings.ToLower(answer) != "s" {
-			fmt.Fprintln(output, "Please choose (H)it, (D)ouble or (S)tand")
-			fmt.Fscanln(input, &answer)
+		// check if split is ok
+		if player.Hands[index].Cards[0].Rank == player.Hands[index].Cards[1].Rank {
+			for strings.ToLower(answer) != "h" && strings.ToLower(answer) != "p" && strings.ToLower(answer) != "d" && strings.ToLower(answer) != "s" {
+				fmt.Fprintln(output, "Please choose (H)it, S(P)lit, (D)ouble or (S)tand")
+				fmt.Fscanln(input, &answer)
+			}
+		} else {
+			// double ok
+			for strings.ToLower(answer) != "h" && strings.ToLower(answer) != "d" && strings.ToLower(answer) != "s" {
+				fmt.Fprintln(output, "Please choose (H)it, (D)ouble or (S)tand")
+				fmt.Fscanln(input, &answer)
+			}
 		}
 	}
 

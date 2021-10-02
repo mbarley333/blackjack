@@ -437,13 +437,6 @@ func (g *Game) Outcome(output io.Writer) {
 func (g *Game) ResetPlayers() {
 
 	for _, player := range g.Players {
-
-		// g.Players[index].Hand = []cards.Card{}
-		// g.Players[index].Action = None
-		// g.Players[index].HandOutcome = OutcomeNone
-		// g.Players[index].HandBet = 0
-		// g.Players[index].HandPayout = 0
-
 		player.HandIndex = 0
 		player.Hands = []*Hand{}
 		hand := NewHand(1)
@@ -451,7 +444,6 @@ func (g *Game) ResetPlayers() {
 		player.Action = None
 
 	}
-	//g.Dealer.Hand = []cards.Card{}
 	g.Dealer.Hands = []*Hand{}
 	hand := NewHand(1)
 	g.Dealer.AddHand(hand)
@@ -481,19 +473,15 @@ func (g Game) IncomingDeck() cards.Deck {
 }
 
 type Player struct {
-	Name string
-	//Hand          []cards.Card
-	Action Action
-	//HandOutcome   Outcome
+	Name          string
+	Action        Action
 	Bet           func(io.Writer, io.Reader, *Player, int) error
 	Decide        func(io.Writer, io.Reader, *Player, cards.Card, int) Action
 	AiHandsToPlay int
 	Record        Record
 	Cash          int
-	// HandBet       int
-	// HandPayout    int
-	Hands     []*Hand
-	HandIndex int
+	Hands         []*Hand
+	HandIndex     int
 }
 
 func (p *Player) Payout() {
@@ -546,9 +534,42 @@ func (h *Hand) DoubleDown(output io.Writer, card cards.Card, name string) {
 
 }
 
-func (h Hand) ChooseAction() bool {
+func (p Player) NextHandId() int {
+	return len(p.Hands) + 1
+}
 
-	return h.Action != ActionQuit && h.Action != ActionStand && h.Outcome != OutcomeBlackjack && h.Outcome != OutcomeBust
+func (p *Player) Split(card1, card2 cards.Card) {
+
+	id := p.NextHandId()
+	hand := NewHand(id)
+	p.AddHand(hand)
+	indexNewHand := len(p.Hands) - 1
+
+	// take last card in original hand and append to the new split hand
+	card := p.Hands[p.HandIndex].Cards[1]
+	p.Hands[indexNewHand].Cards = append(p.Hands[indexNewHand].Cards, card)
+
+	// reset slice on original hand to only have the first card
+	p.Hands[p.HandIndex].Cards = p.Hands[p.HandIndex].Cards[:len(p.Hands[p.HandIndex].Cards)-1]
+
+	// mirror bet on new hand
+	p.Hands[indexNewHand].Bet += p.Hands[p.HandIndex].Bet
+	p.Cash -= p.Hands[p.HandIndex].Bet
+
+	// add cards to each hand
+	p.Hands[p.HandIndex].Cards = append(p.Hands[p.HandIndex].Cards, card1)
+	p.Hands[indexNewHand].Cards = append(p.Hands[indexNewHand].Cards, card2)
+}
+
+func (p *Player) AddHand(hand *Hand) {
+	p.Hands = append(p.Hands, hand)
+}
+
+func NewHand(id int) *Hand {
+	hand := Hand{
+		Id: id,
+	}
+	return &hand
 }
 
 func (p *Player) SetWinLoseTie() {
@@ -563,46 +584,6 @@ func (p *Player) SetWinLoseTie() {
 		}
 		p.Record.HandsPlayed += 1
 	}
-}
-
-func (p Player) PlayerString() string {
-
-	builder := strings.Builder{}
-	var response string
-	for index, hand := range p.Hands {
-		if hand.Action == ActionDoubleDown {
-			builder.WriteString(p.Name + " has ???: " + "[" + hand.Cards[0].String() + "]" + "[" + hand.Cards[1].String() + "]" + "[???]\n")
-			response += builder.String()
-		} else {
-			for _, card := range p.Hands[index].Cards {
-				builder.WriteString("[" + card.String() + "]")
-			}
-			str := []string{p.Name, " has ", fmt.Sprint(hand.Score()), ": ", builder.String(), "\n"}
-			response = strings.Join(str, "")
-		}
-
-	}
-
-	return response
-}
-
-func (h Hand) HandString(name string) string {
-
-	builder := strings.Builder{}
-	var response string
-
-	if h.Action == ActionDoubleDown {
-		builder.WriteString(name + " has ???: " + "[" + h.Cards[0].String() + "]" + "[" + h.Cards[1].String() + "]" + "[???]\n")
-		response += builder.String()
-	} else {
-		for _, card := range h.Cards {
-			builder.WriteString("[" + card.String() + "]")
-		}
-		str := []string{name, " has ", fmt.Sprint(h.Score()), ": ", builder.String(), "\n"}
-		response = strings.Join(str, "")
-	}
-
-	return response
 }
 
 func (p *Player) OutcomeReport(output io.Writer) {
@@ -633,26 +614,25 @@ func (p Player) DealerString() string {
 	return "Dealer has: [" + p.Hands[0].Cards[0].String() + "]" + "[???]"
 }
 
-func (h Hand) Score() int {
-	minScore := h.MinScore()
+func (p Player) PlayerString() string {
 
-	if minScore > 11 {
-		return minScore
-	}
-	for _, c := range h.Cards {
-		if c.Rank == cards.Ace {
-			return minScore + 10
+	builder := strings.Builder{}
+	var response string
+	for index, hand := range p.Hands {
+		if hand.Action == ActionDoubleDown {
+			builder.WriteString(p.Name + " has ???: " + "[" + hand.Cards[0].String() + "]" + "[" + hand.Cards[1].String() + "]" + "[???]\n")
+			response += builder.String()
+		} else {
+			for _, card := range p.Hands[index].Cards {
+				builder.WriteString("[" + card.String() + "]")
+			}
+			str := []string{p.Name, " has ", fmt.Sprint(hand.Score()), ": ", builder.String(), "\n"}
+			response = strings.Join(str, "")
 		}
-	}
-	return minScore
-}
 
-func (h Hand) MinScore() int {
-	score := 0
-	for _, c := range h.Cards {
-		score += min(int(c.Rank), 10)
 	}
-	return score
+
+	return response
 }
 
 func NewPlayer(output io.Writer, input io.Reader) (Player, error) {
@@ -702,6 +682,60 @@ func NewPlayer(output io.Writer, input io.Reader) (Player, error) {
 	return player, nil
 }
 
+type Hand struct {
+	Id      int
+	Cards   []cards.Card
+	Bet     int
+	Action  Action
+	Outcome Outcome
+	Payout  int
+}
+
+func (h Hand) ChooseAction() bool {
+	return h.Action != ActionQuit && h.Action != ActionStand && h.Outcome != OutcomeBlackjack && h.Outcome != OutcomeBust
+}
+
+func (h Hand) HandString(name string) string {
+
+	builder := strings.Builder{}
+	var response string
+
+	if h.Action == ActionDoubleDown {
+		builder.WriteString(name + " has ???: " + "[" + h.Cards[0].String() + "]" + "[" + h.Cards[1].String() + "]" + "[???]\n")
+		response += builder.String()
+	} else {
+		for _, card := range h.Cards {
+			builder.WriteString("[" + card.String() + "]")
+		}
+		str := []string{name, " has ", fmt.Sprint(h.Score()), ": ", builder.String(), "\n"}
+		response = strings.Join(str, "")
+	}
+
+	return response
+}
+
+func (h Hand) Score() int {
+	minScore := h.MinScore()
+
+	if minScore > 11 {
+		return minScore
+	}
+	for _, c := range h.Cards {
+		if c.Rank == cards.Ace {
+			return minScore + 10
+		}
+	}
+	return minScore
+}
+
+func (h Hand) MinScore() int {
+	score := 0
+	for _, c := range h.Cards {
+		score += min(int(c.Rank), 10)
+	}
+	return score
+}
+
 type Record struct {
 	Win         int
 	Lose        int
@@ -722,15 +756,6 @@ func (r Record) RecordString() string {
 	}
 
 	return strings.Join(str, "")
-}
-
-type Hand struct {
-	Id      int
-	Cards   []cards.Card
-	Bet     int
-	Action  Action
-	Outcome Outcome
-	Payout  int
 }
 
 func min(a, b int) int {
@@ -816,55 +841,13 @@ func HumanBet(output io.Writer, input io.Reader, player *Player, index int) erro
 
 }
 
-func (p Player) NextHandId() int {
-	return len(p.Hands) + 1
-}
-
-func NewHand(id int) *Hand {
-
-	hand := Hand{
-		Id: id,
-	}
-	return &hand
-}
-
-func (p *Player) AddHand(hand *Hand) {
-
-	p.Hands = append(p.Hands, hand)
-
-}
-
-func (p *Player) Split(card1, card2 cards.Card) {
-
-	id := p.NextHandId()
-	hand := NewHand(id)
-	p.AddHand(hand)
-	indexNewHand := len(p.Hands) - 1
-
-	// take last card in original hand and append to the new split hand
-	card := p.Hands[p.HandIndex].Cards[1]
-	p.Hands[indexNewHand].Cards = append(p.Hands[indexNewHand].Cards, card)
-
-	// reset slice on original hand to only have the first card
-	p.Hands[p.HandIndex].Cards = p.Hands[p.HandIndex].Cards[:len(p.Hands[p.HandIndex].Cards)-1]
-
-	// mirror bet on new hand
-	p.Hands[indexNewHand].Bet += p.Hands[p.HandIndex].Bet
-	p.Cash -= p.Hands[p.HandIndex].Bet
-
-	// add cards to each hand
-	p.Hands[p.HandIndex].Cards = append(p.Hands[p.HandIndex].Cards, card1)
-	p.Hands[indexNewHand].Cards = append(p.Hands[indexNewHand].Cards, card2)
-
-}
-
 // additional features
 // difficult to fake concreate...take interface instead
 // burn cards
 
-// 7. split
-// 6. Double down
-// 5. card counting
+// 7. card counting
+// 6. split
+// 5. Double down
 // 4. basic strategy ai
 // 3. reshuffle
 // 2. betting - push outcome...just bet $10, handle no money player and dealer

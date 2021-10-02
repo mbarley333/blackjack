@@ -643,77 +643,77 @@ func TestDoubleDown(t *testing.T) {
 
 }
 
-// func TestSplit(t *testing.T) {
-// 	t.Parallel()
-// 	output := &bytes.Buffer{}
+func TestSplit(t *testing.T) {
+	t.Parallel()
+	output := &bytes.Buffer{}
 
-// 	stack := []cards.Card{
-// 		{Rank: cards.Six, Suit: cards.Heart},
-// 		{Rank: cards.Six, Suit: cards.Club},
-// 		{Rank: cards.Nine, Suit: cards.Spade},
-// 		{Rank: cards.Four, Suit: cards.Diamond},
-// 	}
+	stack := []cards.Card{
+		{Rank: cards.Six, Suit: cards.Heart},
+		{Rank: cards.Six, Suit: cards.Club},
+		{Rank: cards.Nine, Suit: cards.Spade},
+		{Rank: cards.Four, Suit: cards.Diamond},
+	}
 
-// 	deck := cards.Deck{
-// 		Cards: stack,
-// 	}
+	deck := cards.Deck{
+		Cards: stack,
+	}
 
-// 	g, err := blackjack.NewBlackjackGame(
-// 		blackjack.WithCustomDeck(deck),
-// 		blackjack.WithOutput(output),
-// 		blackjack.WithIncomingDeck(false),
-// 	)
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
+	g, err := blackjack.NewBlackjackGame(
+		blackjack.WithCustomDeck(deck),
+		blackjack.WithOutput(output),
+		blackjack.WithIncomingDeck(false),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-// 	p := &blackjack.Player{}
+	p := &blackjack.Player{
+		Cash: 99,
+		Hands: []*blackjack.Hand{
+			{
+				Id:  1,
+				Bet: 1,
+			},
+		},
+	}
 
-// 	g.AddPlayer(p)
+	g.AddPlayer(p)
 
-// 	id := p.NextHandId()
-// 	newHand := blackjack.NewHand(id)
+	card := g.Deal(output)
+	g.Players[0].Hands[p.HandIndex].Cards = append(g.Players[0].Hands[p.HandIndex].Cards, card)
+	card = g.Deal(output)
+	g.Players[0].Hands[p.HandIndex].Cards = append(g.Players[0].Hands[p.HandIndex].Cards, card)
 
-// 	p.AddHand(newHand)
+	card1 := g.Deal(output)
+	card2 := g.Deal(output)
 
-// 	card := g.Deal(output)
-// 	g.Players[0].Hands[p.HandIndex].Cards = append(g.Players[0].Hands[p.HandIndex].Cards, card)
-// 	card = g.Deal(output)
-// 	g.Players[0].Hands[p.HandIndex].Cards = append(g.Players[0].Hands[p.HandIndex].Cards, card)
+	g.Players[0].Split(card1, card2)
 
-// 	g.Players[0].Hands[0].Bet = 1
-// 	g.Players[0].Cash = 99
+	want := &blackjack.Player{
+		Cash: 98,
+		Hands: []*blackjack.Hand{
+			{
+				Id: 1,
+				Cards: []cards.Card{
+					{Rank: cards.Six, Suit: cards.Heart},
+					{Rank: cards.Nine, Suit: cards.Spade},
+				},
+				Bet: 1,
+			},
+			{
+				Id: 2,
+				Cards: []cards.Card{
+					{Rank: cards.Six, Suit: cards.Club},
+					{Rank: cards.Four, Suit: cards.Diamond},
+				},
+				Bet: 1,
+			},
+		},
+	}
+	got := g.Players[0]
 
-// 	card1 := g.Deal(output)
-// 	card2 := g.Deal(output)
+	if !cmp.Equal(want, got) {
+		t.Error(cmp.Diff(want, got))
+	}
 
-// 	g.Players[0].Split(card1, card2)
-
-// 	want := &blackjack.Player{
-// 		Cash: 98,
-// 		Hands: []blackjack.Hand{
-// 			{
-// 				Id: 1,
-// 				Cards: []cards.Card{
-// 					{Rank: cards.Six, Suit: cards.Heart},
-// 					{Rank: cards.Nine, Suit: cards.Spade},
-// 				},
-// 				Bet: 1,
-// 			},
-// 			{
-// 				Id: 2,
-// 				Cards: []cards.Card{
-// 					{Rank: cards.Six, Suit: cards.Club},
-// 					{Rank: cards.Four, Suit: cards.Diamond},
-// 				},
-// 				Bet: 1,
-// 			},
-// 		},
-// 	}
-// 	got := g.Players[0]
-
-// 	if !cmp.Equal(want, got) {
-// 		t.Error(cmp.Diff(want, got))
-// 	}
-
-// }
+}

@@ -26,14 +26,15 @@ func TestBlackjack(t *testing.T) {
 	t.Parallel()
 
 	output := &bytes.Buffer{}
-	input := strings.NewReader("b\n1\ns\nq")
+	input := strings.NewReader("b\n1")
 
 	stack := []cards.Card{
 		{Rank: cards.Queen, Suit: cards.Club},
 		{Rank: cards.Three, Suit: cards.Club},
-		{Rank: cards.Ten, Suit: cards.Club},
+		{Rank: cards.Five, Suit: cards.Club},
 		{Rank: cards.Jack, Suit: cards.Club},
-		{Rank: cards.King, Suit: cards.Club},
+		{Rank: cards.Six, Suit: cards.Club},
+		{Rank: cards.Eight, Suit: cards.Club},
 	}
 
 	deck := cards.Deck{
@@ -57,22 +58,97 @@ func TestBlackjack(t *testing.T) {
 		Bet:    blackjack.HumanBet,
 	}
 
-	g.AddPlayer(p)
+	id := p.NextHandId()
+	hand := blackjack.NewHand(id)
+	p.AddHand(hand)
 
-	g.ResetPlayers()
+	g.AddPlayer(p)
 
 	g.Betting()
 
+	g.OpeningDeal()
+
 	g.Players = g.RemoveQuitPlayers()
 
-	g.Start()
+	card := g.Deal(output)
 
-	want := 101
+	g.Players[0].Hands[0].Hit(output, card, g.Players[0].Name)
 
-	got := g.Players[0].Cash
+	want := &blackjack.Player{
+		Name:   "j",
+		Cash:   99,
+		Decide: blackjack.HumanAction,
+		Bet:    blackjack.HumanBet,
+		Hands: []*blackjack.Hand{
+			{
+				Cards: []cards.Card{
+					{Rank: cards.Queen, Suit: cards.Club},
+					{Rank: cards.Five, Suit: cards.Club},
+					{Rank: cards.Six, Suit: cards.Club},
+				},
+				Id:  1,
+				Bet: 1,
+			},
+		},
+	}
 
-	if want != got {
-		t.Fatalf("want: %d, got: %d", want, got)
+	got := g.Players[0]
+
+	if !cmp.Equal(want, got, cmpopts.IgnoreFields(blackjack.Player{}, "Decide", "Bet")) {
+		t.Error(cmp.Diff(want, got))
+	}
+
+	g.DealerPlay()
+
+	wantDealer := &blackjack.Player{
+		Hands: []*blackjack.Hand{
+			{
+				Cards: []cards.Card{
+					{Rank: cards.Three, Suit: cards.Club},
+					{Rank: cards.Jack, Suit: cards.Club},
+					{Rank: cards.Eight, Suit: cards.Club},
+				},
+				Id:     1,
+				Action: blackjack.ActionStand,
+			},
+		},
+	}
+
+	gotDealer := g.Dealer
+
+	if !cmp.Equal(wantDealer, gotDealer, cmpopts.IgnoreFields(blackjack.Player{}, "Decide", "Bet")) {
+		t.Error(cmp.Diff(wantDealer, gotDealer))
+	}
+
+	g.Outcome(output)
+
+	wantOutcome := &blackjack.Player{
+		Name:   "j",
+		Cash:   100,
+		Decide: blackjack.HumanAction,
+		Bet:    blackjack.HumanBet,
+		Hands: []*blackjack.Hand{
+			{
+				Cards: []cards.Card{
+					{Rank: cards.Queen, Suit: cards.Club},
+					{Rank: cards.Five, Suit: cards.Club},
+					{Rank: cards.Six, Suit: cards.Club},
+				},
+				Id:      1,
+				Bet:     0,
+				Outcome: blackjack.OutcomeTie,
+			},
+		},
+		Record: blackjack.Record{
+			Tie:         1,
+			HandsPlayed: 1,
+		},
+	}
+
+	gotOutcome := g.Players[0]
+
+	if !cmp.Equal(wantOutcome, gotOutcome, cmpopts.IgnoreFields(blackjack.Player{}, "Decide", "Bet")) {
+		t.Error(cmp.Diff(wantOutcome, gotOutcome))
 	}
 
 }
@@ -118,7 +194,7 @@ func TestNewBlackjackGame(t *testing.T) {
 	got := g.Players[0].Record
 
 	if !cmp.Equal(want, got) {
-		cmp.Diff(want, got)
+		t.Error(cmp.Diff(want, got))
 	}
 
 	wantReport := "************** Player Win-Lose-Tie Report **************\nPlayer won: 1, lost: 0 and tied: 0\n"
@@ -129,7 +205,7 @@ func TestNewBlackjackGame(t *testing.T) {
 	}
 
 	wantDealerScore := 25
-	gotDealerScore := g.Dealer.Score()
+	gotDealerScore := g.Dealer.Hands[0].Score()
 
 	if wantDealerScore != gotDealerScore {
 		t.Fatalf("want: %d, got: %d", want, got)
@@ -166,48 +242,66 @@ func TestMultiPlayers(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	player := blackjack.Player{
-		Name:    "Planty",
-		Action:  blackjack.ActionStand,
-		Cash:    99,
-		HandBet: 1,
+	player := &blackjack.Player{
+		Name:   "Planty",
+		Action: blackjack.None,
+		Cash:   99,
+		Hands: []*blackjack.Hand{
+			{
+				Id:     1,
+				Bet:    1,
+				Action: blackjack.ActionStand,
+			},
+		},
 	}
-	g.AddPlayer(&player)
+	g.AddPlayer(player)
 
-	player2 := blackjack.Player{
-		Name:    "Kevin",
-		Action:  blackjack.ActionStand,
-		Cash:    99,
-		HandBet: 1,
+	player2 := &blackjack.Player{
+		Name:   "Kevin",
+		Action: blackjack.None,
+		Cash:   99,
+		Hands: []*blackjack.Hand{
+			{
+				Id:     1,
+				Bet:    1,
+				Action: blackjack.ActionStand,
+			},
+		},
 	}
-	g.AddPlayer(&player2)
+	g.AddPlayer(player2)
 
-	player3 := blackjack.Player{
-		Name:    "Donald",
-		Action:  blackjack.ActionHit,
-		Cash:    99,
-		HandBet: 1,
+	player3 := &blackjack.Player{
+		Name:   "Donald",
+		Action: blackjack.None,
+		Cash:   99,
+		Hands: []*blackjack.Hand{
+			{
+				Id:     1,
+				Bet:    1,
+				Action: blackjack.ActionHit,
+			},
+		},
 	}
-	g.AddPlayer(&player3)
+	g.AddPlayer(player3)
 
 	g.Start()
 
 	wantPlayer := blackjack.OutcomeBlackjack
-	gotPlayer := g.Players[0].HandOutcome
+	gotPlayer := g.Players[0].Hands[0].Outcome
 
 	if wantPlayer != gotPlayer {
 		t.Fatalf("wanted: %q, got: %q", wantPlayer.String(), gotPlayer.String())
 	}
 
 	wantPlayer2 := blackjack.OutcomeWin
-	gotPlayer2 := g.Players[1].HandOutcome
+	gotPlayer2 := g.Players[1].Hands[0].Outcome
 
 	if wantPlayer2 != gotPlayer2 {
 		t.Fatalf("wanted: %q, got: %q", wantPlayer2.String(), gotPlayer2.String())
 	}
 
 	wantPlayer3 := blackjack.OutcomeBust
-	gotPlayer3 := g.Players[2].HandOutcome
+	gotPlayer3 := g.Players[2].Hands[0].Outcome
 
 	if wantPlayer3 != gotPlayer3 {
 		t.Fatalf("wanted: %q, got: %q", wantPlayer3.String(), gotPlayer3.String())
@@ -238,38 +332,6 @@ func TestRemoveQuitPlayers(t *testing.T) {
 
 }
 
-func TestBetting(t *testing.T) {
-	t.Parallel()
-
-	output := &bytes.Buffer{}
-	input := strings.NewReader("b\n1")
-
-	player := blackjack.Player{
-		Bet:         blackjack.HumanBet,
-		Cash:        100,
-		HandOutcome: blackjack.OutcomeWin,
-	}
-
-	err := player.Bet(output, input, &player)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	player.Payout()
-
-	want := blackjack.Player{
-		HandBet: 0,
-		Cash:    101,
-	}
-
-	got := player
-
-	if !cmp.Equal(want, got) {
-		cmp.Diff(want, got)
-	}
-
-}
-
 func TestPayout(t *testing.T) {
 	t.Parallel()
 
@@ -287,24 +349,34 @@ func TestPayout(t *testing.T) {
 	}
 
 	for _, tc := range tcs {
-		want := blackjack.Player{
-			HandBet:     tc.bet,
-			Cash:        tc.cash,
-			HandOutcome: tc.outcome,
-			HandPayout:  tc.handPayout,
+
+		want := &blackjack.Player{
+			Cash: tc.cash,
+			Hands: []*blackjack.Hand{
+				{
+					Id:      1,
+					Outcome: tc.outcome,
+					Payout:  tc.handPayout,
+				},
+			},
 		}
 
-		p := blackjack.Player{
-			Cash:        100,
-			HandBet:     tc.bet,
-			HandOutcome: tc.outcome,
+		p := &blackjack.Player{
+			Cash: 99,
+			Hands: []*blackjack.Hand{
+				{
+					Id:      1,
+					Bet:     tc.bet,
+					Outcome: tc.outcome,
+				},
+			},
 		}
 
 		p.Payout()
 		got := p
 
 		if !cmp.Equal(want, got) {
-			cmp.Diff(want, got)
+			t.Error(cmp.Diff(want, got))
 		}
 	}
 }
@@ -314,16 +386,21 @@ func TestPlayerCash(t *testing.T) {
 
 	output := &bytes.Buffer{}
 
-	p := blackjack.Player{
-		Name:        "Planty",
-		Cash:        100,
-		HandOutcome: blackjack.OutcomeWin,
-		HandPayout:  1,
+	p := &blackjack.Player{
+		Name: "Planty",
+		Cash: 101,
+		Hands: []*blackjack.Hand{
+			{
+				Id:      1,
+				Outcome: blackjack.OutcomeWin,
+				Payout:  1,
+			},
+		},
 	}
 
 	p.OutcomeReport(output)
 
-	want := "Planty won $1.  Cash available: $100\n"
+	want := "Planty won $1.  Cash available: $101\n"
 
 	got := output.String()
 
@@ -343,10 +420,15 @@ func TestPlayerBroke(t *testing.T) {
 	}
 
 	p := &blackjack.Player{
-		Name:        "Planty",
-		HandBet:     1,
-		Cash:        0,
-		HandOutcome: blackjack.OutcomeLose,
+		Name: "Planty",
+		Hands: []*blackjack.Hand{
+			{
+				Id:      1,
+				Outcome: blackjack.OutcomeLose,
+				Payout:  -1,
+			},
+		},
+		Cash: 0,
 	}
 
 	g.AddPlayer(p)
@@ -389,153 +471,6 @@ func TestIncomingDeck(t *testing.T) {
 
 }
 
-func TestAiBasicAction(t *testing.T) {
-
-	g, err := blackjack.NewBlackjackGame()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	type testCase struct {
-		playerCards []cards.Card
-		dealerCard  cards.Card
-		action      blackjack.Action
-		bet         int
-		cash        int
-		description string
-	}
-	tcs := []testCase{
-		{
-			playerCards: []cards.Card{{Rank: cards.Seven, Suit: cards.Club}, {Rank: cards.Three, Suit: cards.Club}},
-			dealerCard:  cards.Card{Rank: cards.Four, Suit: cards.Club},
-			action:      blackjack.ActionDoubleDown,
-			bet:         1,
-			cash:        10,
-			description: "10 or 11, dealer < 10 or 11, enough to double",
-		},
-		{
-			playerCards: []cards.Card{{Rank: cards.Seven, Suit: cards.Club}, {Rank: cards.Three, Suit: cards.Club}},
-			dealerCard:  cards.Card{Rank: cards.Four, Suit: cards.Club},
-			action:      blackjack.ActionHit,
-			bet:         10,
-			cash:        1,
-			description: "10 or 11, dealer < 10 or 11, not enough to double",
-		},
-		{
-			playerCards: []cards.Card{{Rank: cards.Six, Suit: cards.Club}, {Rank: cards.Three, Suit: cards.Club}},
-			dealerCard:  cards.Card{Rank: cards.Four, Suit: cards.Club},
-			action:      blackjack.ActionDoubleDown,
-			bet:         1,
-			cash:        10,
-			description: "9, dealer between 3 and 6, enough to double",
-		},
-		{
-			playerCards: []cards.Card{{Rank: cards.Six, Suit: cards.Club}, {Rank: cards.Three, Suit: cards.Club}},
-			dealerCard:  cards.Card{Rank: cards.Four, Suit: cards.Club},
-			action:      blackjack.ActionHit,
-			bet:         10,
-			cash:        1,
-			description: "9, dealer between 3 and 6, not enough to double",
-		},
-		{
-			playerCards: []cards.Card{{Rank: cards.Ace, Suit: cards.Club}, {Rank: cards.Jack, Suit: cards.Club}},
-			dealerCard:  cards.Card{Rank: cards.Four, Suit: cards.Club},
-			action:      blackjack.ActionStand,
-			description: "Blackjack",
-		},
-		{
-			playerCards: []cards.Card{{Rank: cards.Five, Suit: cards.Club}, {Rank: cards.Three, Suit: cards.Club}},
-			dealerCard:  cards.Card{Rank: cards.Four, Suit: cards.Club},
-			action:      blackjack.ActionHit,
-			description: "Eleven or less",
-		},
-		{
-			playerCards: []cards.Card{{Rank: cards.Ace, Suit: cards.Club}, {Rank: cards.Four, Suit: cards.Club}},
-			dealerCard:  cards.Card{Rank: cards.Four, Suit: cards.Club},
-			action:      blackjack.ActionHit,
-			description: "Soft 15 or less",
-		},
-		{
-			playerCards: []cards.Card{{Rank: cards.Ace, Suit: cards.Club}, {Rank: cards.Eight, Suit: cards.Club}},
-			dealerCard:  cards.Card{Rank: cards.Four, Suit: cards.Club},
-			action:      blackjack.ActionStand,
-			description: "Soft 19 or higher",
-		},
-		{
-			playerCards: []cards.Card{{Rank: cards.Ace, Suit: cards.Club}, {Rank: cards.Six, Suit: cards.Club}},
-			dealerCard:  cards.Card{Rank: cards.Seven, Suit: cards.Club},
-			action:      blackjack.ActionHit,
-			description: "Soft 16 to 18, dealer >= 7",
-		},
-		{
-			playerCards: []cards.Card{{Rank: cards.Ace, Suit: cards.Club}, {Rank: cards.Six, Suit: cards.Club}},
-			dealerCard:  cards.Card{Rank: cards.Six, Suit: cards.Club},
-			action:      blackjack.ActionDoubleDown,
-			description: "Soft 16 to 18, dealer <= 6, enough to double",
-			bet:         1,
-			cash:        10,
-		},
-		{
-			playerCards: []cards.Card{{Rank: cards.Ace, Suit: cards.Club}, {Rank: cards.Six, Suit: cards.Club}},
-			dealerCard:  cards.Card{Rank: cards.Six, Suit: cards.Club},
-			action:      blackjack.ActionHit,
-			description: "Soft 16 to 18, dealer <= 6, not enough to double",
-			bet:         10,
-			cash:        1,
-		},
-		{
-			playerCards: []cards.Card{{Rank: cards.Ten, Suit: cards.Club}, {Rank: cards.Three, Suit: cards.Club}, {Rank: cards.Five, Suit: cards.Club}},
-			dealerCard:  cards.Card{Rank: cards.Four, Suit: cards.Club},
-			action:      blackjack.ActionStand,
-			description: "Hard 17 to 21",
-		},
-		{
-			playerCards: []cards.Card{{Rank: cards.Ten, Suit: cards.Club}, {Rank: cards.Three, Suit: cards.Club}, {Rank: cards.Two, Suit: cards.Club}},
-			dealerCard:  cards.Card{Rank: cards.Four, Suit: cards.Club},
-			action:      blackjack.ActionStand,
-			description: "Hard 12 to 16 w/ Dealer <= 6",
-		},
-		{
-			playerCards: []cards.Card{{Rank: cards.Six, Suit: cards.Club}, {Rank: cards.Two, Suit: cards.Club}, {Rank: cards.Four, Suit: cards.Club}},
-			dealerCard:  cards.Card{Rank: cards.Three, Suit: cards.Club},
-			action:      blackjack.ActionHit,
-			description: "Hard 12 w/ Dealer <= 3",
-		},
-		{
-			playerCards: []cards.Card{{Rank: cards.Ten, Suit: cards.Club}, {Rank: cards.Three, Suit: cards.Club}, {Rank: cards.Two, Suit: cards.Club}},
-			dealerCard:  cards.Card{Rank: cards.Seven, Suit: cards.Club},
-			action:      blackjack.ActionHit,
-			description: "Hard 12 to 16 w/ Dealer >= 7",
-		},
-	}
-
-	output := &bytes.Buffer{}
-	input := strings.NewReader("")
-
-	for _, tc := range tcs {
-		p := &blackjack.Player{
-			Hand:    tc.playerCards,
-			Decide:  blackjack.AiActionBasic,
-			HandBet: tc.bet,
-			Cash:    tc.cash,
-		}
-		g.AddPlayer(p)
-		g.Dealer.Hand = append(g.Dealer.Hand, tc.dealerCard)
-
-		want := tc.action
-
-		got := g.Players[0].Decide(output, input, g.Players[0], g.Dealer.Hand[0])
-
-		if want != got {
-			t.Fatalf("%q: wanted: %q, got: %q", tc.description, want.String(), got.String())
-		}
-		g.Players = []*blackjack.Player{}
-		g.Dealer.Hand = nil
-
-	}
-
-}
-
 func TestScoreDealerHoleCard(t *testing.T) {
 
 	type testCase struct {
@@ -570,35 +505,78 @@ func TestDealerAi(t *testing.T) {
 
 	type testCase struct {
 		players     []*blackjack.Player
-		dealerHand  []cards.Card
+		dealerHand  []*blackjack.Hand
 		description string
 		result      bool
 	}
 	tcs := []testCase{
 		{
-			players:     []*blackjack.Player{{HandOutcome: blackjack.OutcomeBust}},
-			dealerHand:  []cards.Card{{Rank: cards.Seven, Suit: cards.Club}, {Rank: cards.Seven, Suit: cards.Club}},
+			players: []*blackjack.Player{
+				{Hands: []*blackjack.Hand{
+					{
+						Outcome: blackjack.OutcomeBust,
+					},
+				},
+				},
+			},
+			dealerHand: []*blackjack.Hand{
+				{
+					Cards: []cards.Card{{Rank: cards.Seven, Suit: cards.Club}, {Rank: cards.Seven, Suit: cards.Club}},
+				},
+			},
 			result:      false,
 			description: "All Players Busted",
 		},
 		{
-			players:     []*blackjack.Player{{HandOutcome: blackjack.OutcomeNone}, {HandOutcome: blackjack.OutcomeBlackjack}},
-			dealerHand:  []cards.Card{{Rank: cards.Seven, Suit: cards.Club}, {Rank: cards.Seven, Suit: cards.Club}},
+			players: []*blackjack.Player{
+				{Hands: []*blackjack.Hand{
+					{
+						Outcome: blackjack.OutcomeBust,
+					},
+				},
+				},
+				{Hands: []*blackjack.Hand{
+					{},
+				},
+				},
+			},
+			dealerHand: []*blackjack.Hand{
+				{
+					Cards: []cards.Card{{Rank: cards.Seven, Suit: cards.Club}, {Rank: cards.Seven, Suit: cards.Club}},
+				},
+			},
 			result:      true,
 			description: "All Players Not Busted",
 		},
 		{
-			players:     []*blackjack.Player{{HandOutcome: blackjack.OutcomeBlackjack}},
-			dealerHand:  []cards.Card{{Rank: cards.Seven, Suit: cards.Club}, {Rank: cards.Seven, Suit: cards.Club}},
+			players: []*blackjack.Player{
+				{Hands: []*blackjack.Hand{
+					{
+						Outcome: blackjack.OutcomeBust,
+					},
+				},
+				},
+				{Hands: []*blackjack.Hand{
+					{
+						Outcome: blackjack.OutcomeBlackjack,
+					},
+				},
+				},
+			},
+			dealerHand: []*blackjack.Hand{
+				{
+					Cards: []cards.Card{{Rank: cards.Seven, Suit: cards.Club}, {Rank: cards.Seven, Suit: cards.Club}},
+				},
+			},
 			result:      false,
-			description: "All Players Blackjack",
+			description: "All Players Blackjack or Bust",
 		},
 	}
 
 	for _, tc := range tcs {
 
 		g.Players = tc.players
-		g.Dealer.Hand = tc.dealerHand
+		g.Dealer.Hands = tc.dealerHand
 		want := tc.result
 		got := g.IsDealerDraw()
 
@@ -606,7 +584,7 @@ func TestDealerAi(t *testing.T) {
 			t.Fatalf("%s: wanted: %v, got: %v", tc.description, want, got)
 		}
 		g.Players = nil
-		g.Dealer.Hand = nil
+		g.Dealer.Hands = nil
 
 	}
 
@@ -639,23 +617,196 @@ func TestDoubleDown(t *testing.T) {
 	}
 
 	p := &blackjack.Player{
-		Name:    "planty",
-		HandBet: 1,
-		Cash:    100,
-		Decide:  blackjack.HumanAction,
-		Bet:     blackjack.HumanBet,
+		Name: "planty",
+		Hands: []*blackjack.Hand{
+			{
+				Id:  1,
+				Bet: 1,
+			},
+		},
+		Cash:   99,
+		Decide: blackjack.HumanAction,
+		Bet:    blackjack.HumanBet,
 	}
 
 	g.AddPlayer(p)
 
 	g.Start()
 
-	want := 104
+	want := 102
 
 	got := g.Players[0].Cash
 
 	if want != got {
 		t.Fatalf("wanted: %d, got: %d", want, got)
+	}
+
+}
+
+func TestSplit(t *testing.T) {
+	t.Parallel()
+	output := &bytes.Buffer{}
+
+	stack := []cards.Card{
+		{Rank: cards.Six, Suit: cards.Heart},
+		{Rank: cards.Six, Suit: cards.Club},
+		{Rank: cards.Nine, Suit: cards.Spade},
+		{Rank: cards.Four, Suit: cards.Diamond},
+	}
+
+	deck := cards.Deck{
+		Cards: stack,
+	}
+
+	g, err := blackjack.NewBlackjackGame(
+		blackjack.WithCustomDeck(deck),
+		blackjack.WithOutput(output),
+		blackjack.WithIncomingDeck(false),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	p := &blackjack.Player{
+		Cash: 99,
+		Hands: []*blackjack.Hand{
+			{
+				Id:  1,
+				Bet: 1,
+			},
+		},
+	}
+
+	g.AddPlayer(p)
+
+	card := g.Deal(output)
+	g.Players[0].Hands[p.HandIndex].Cards = append(g.Players[0].Hands[p.HandIndex].Cards, card)
+	card = g.Deal(output)
+	g.Players[0].Hands[p.HandIndex].Cards = append(g.Players[0].Hands[p.HandIndex].Cards, card)
+
+	card1 := g.Deal(output)
+	card2 := g.Deal(output)
+
+	g.Players[0].Split(output, card1, card2)
+
+	want := &blackjack.Player{
+		Cash: 98,
+		Hands: []*blackjack.Hand{
+			{
+				Id: 1,
+				Cards: []cards.Card{
+					{Rank: cards.Six, Suit: cards.Heart},
+					{Rank: cards.Nine, Suit: cards.Spade},
+				},
+				Bet:    1,
+				Action: blackjack.None,
+			},
+			{
+				Id: 2,
+				Cards: []cards.Card{
+					{Rank: cards.Six, Suit: cards.Club},
+					{Rank: cards.Four, Suit: cards.Diamond},
+				},
+				Bet:    1,
+				Action: blackjack.None,
+			},
+		},
+	}
+	got := g.Players[0]
+
+	if !cmp.Equal(want, got) {
+		t.Error(cmp.Diff(want, got))
+	}
+
+}
+
+func TestPlayHand(t *testing.T) {
+	output := &bytes.Buffer{}
+	input := strings.NewReader("s\ns")
+
+	stack := []cards.Card{
+		{Rank: cards.Six, Suit: cards.Heart},
+		{Rank: cards.Six, Suit: cards.Club},
+		{Rank: cards.Nine, Suit: cards.Spade},
+		{Rank: cards.Four, Suit: cards.Diamond},
+	}
+
+	deck := cards.Deck{
+		Cards: stack,
+	}
+
+	g, err := blackjack.NewBlackjackGame(
+		blackjack.WithCustomDeck(deck),
+		blackjack.WithOutput(output),
+		blackjack.WithInput(input),
+		blackjack.WithIncomingDeck(false),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := &blackjack.Player{
+		Name:   "test",
+		Cash:   99,
+		Decide: blackjack.HumanAction,
+		Hands: []*blackjack.Hand{
+			{
+				Id:     1,
+				Bet:    1,
+				Action: blackjack.ActionSplit,
+				Cards: []cards.Card{
+					{Rank: cards.Three, Suit: cards.Club},
+					{Rank: cards.Three, Suit: cards.Club},
+				},
+			},
+		},
+	}
+
+	g.AddPlayer(p)
+
+	g.Dealer = &blackjack.Player{
+		Hands: []*blackjack.Hand{
+			{
+				Cards: []cards.Card{
+					{Rank: cards.Three, Suit: cards.Club},
+					{Rank: cards.Three, Suit: cards.Club},
+				},
+				Id:     1,
+				Action: blackjack.ActionStand,
+			},
+		},
+	}
+
+	g.PlayHand(g.Players[0])
+
+	want := &blackjack.Player{
+		Name: "test",
+		Cash: 98,
+		Hands: []*blackjack.Hand{
+			{
+				Cards: []cards.Card{
+					{Rank: cards.Three, Suit: cards.Club},
+					{Rank: cards.Six, Suit: cards.Heart},
+				},
+				Id:     1,
+				Action: blackjack.ActionStand,
+				Bet:    1,
+			},
+			{
+				Cards: []cards.Card{
+					{Rank: cards.Three, Suit: cards.Club},
+					{Rank: cards.Six, Suit: cards.Club},
+				},
+				Id:     2,
+				Action: blackjack.ActionStand,
+				Bet:    1,
+			},
+		},
+	}
+
+	got := g.Players[0]
+
+	if !cmp.Equal(want, got, cmpopts.IgnoreFields(blackjack.Player{}, "Decide", "Bet")) {
+		t.Error(cmp.Diff(want, got))
 	}
 
 }

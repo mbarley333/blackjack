@@ -698,7 +698,8 @@ func TestSplit(t *testing.T) {
 					{Rank: cards.Six, Suit: cards.Heart},
 					{Rank: cards.Nine, Suit: cards.Spade},
 				},
-				Bet: 1,
+				Bet:    1,
+				Action: blackjack.None,
 			},
 			{
 				Id: 2,
@@ -706,13 +707,105 @@ func TestSplit(t *testing.T) {
 					{Rank: cards.Six, Suit: cards.Club},
 					{Rank: cards.Four, Suit: cards.Diamond},
 				},
-				Bet: 1,
+				Bet:    1,
+				Action: blackjack.None,
 			},
 		},
 	}
 	got := g.Players[0]
 
 	if !cmp.Equal(want, got) {
+		t.Error(cmp.Diff(want, got))
+	}
+
+}
+
+func TestPlayHand(t *testing.T) {
+	output := &bytes.Buffer{}
+	input := strings.NewReader("s\ns")
+
+	stack := []cards.Card{
+		{Rank: cards.Six, Suit: cards.Heart},
+		{Rank: cards.Six, Suit: cards.Club},
+		{Rank: cards.Nine, Suit: cards.Spade},
+		{Rank: cards.Four, Suit: cards.Diamond},
+	}
+
+	deck := cards.Deck{
+		Cards: stack,
+	}
+
+	g, err := blackjack.NewBlackjackGame(
+		blackjack.WithCustomDeck(deck),
+		blackjack.WithOutput(output),
+		blackjack.WithInput(input),
+		blackjack.WithIncomingDeck(false),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := &blackjack.Player{
+		Name:   "test",
+		Cash:   99,
+		Decide: blackjack.HumanAction,
+		Hands: []*blackjack.Hand{
+			{
+				Id:     1,
+				Bet:    1,
+				Action: blackjack.ActionSplit,
+				Cards: []cards.Card{
+					{Rank: cards.Three, Suit: cards.Club},
+					{Rank: cards.Three, Suit: cards.Club},
+				},
+			},
+		},
+	}
+
+	g.AddPlayer(p)
+
+	g.Dealer = &blackjack.Player{
+		Hands: []*blackjack.Hand{
+			{
+				Cards: []cards.Card{
+					{Rank: cards.Three, Suit: cards.Club},
+					{Rank: cards.Three, Suit: cards.Club},
+				},
+				Id:     1,
+				Action: blackjack.ActionStand,
+			},
+		},
+	}
+
+	g.PlayHand(g.Players[0])
+
+	want := &blackjack.Player{
+		Name: "test",
+		Cash: 98,
+		Hands: []*blackjack.Hand{
+			{
+				Cards: []cards.Card{
+					{Rank: cards.Three, Suit: cards.Club},
+					{Rank: cards.Six, Suit: cards.Heart},
+				},
+				Id:     1,
+				Action: blackjack.ActionStand,
+				Bet:    1,
+			},
+			{
+				Cards: []cards.Card{
+					{Rank: cards.Three, Suit: cards.Club},
+					{Rank: cards.Six, Suit: cards.Club},
+				},
+				Id:     2,
+				Action: blackjack.ActionStand,
+				Bet:    1,
+			},
+		},
+	}
+
+	got := g.Players[0]
+
+	if !cmp.Equal(want, got, cmpopts.IgnoreFields(blackjack.Player{}, "Decide", "Bet")) {
 		t.Error(cmp.Diff(want, got))
 	}
 

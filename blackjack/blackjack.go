@@ -175,7 +175,7 @@ func NewBlackjackGame(opts ...Option) (*Game, error) {
 		output:         os.Stdout,
 		input:          os.Stdin,
 		IsIncomingDeck: true,
-		DeckCount:      3,
+		DeckCount:      6,
 		random:         rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
 
@@ -299,26 +299,32 @@ func (g *Game) Start() {
 
 	for _, player := range g.Players {
 
-		for index, hand := range player.Hands {
-			if hand.Score() == 21 {
-				hand.Outcome = OutcomeBlackjack
-			}
+		g.PlayHand(player)
 
-			for hand.ChooseAction() {
-				if hand.Action == None {
-					hand.Action = player.Decide(g.output, g.input, player, g.Dealer.Hands[0].Cards[0], index)
-				}
-				if hand.Action == ActionHit {
-					card := g.Deal(g.output)
-					hand.Hit(g.output, card, player.Name)
-				} else if hand.Action == ActionDoubleDown {
-					player.Cash -= hand.Bet
-					card := g.Deal(g.output)
-					hand.DoubleDown(g.output, card, player.Name)
+		// for index, hand := range player.Hands {
+		// 	if hand.Score() == 21 {
+		// 		hand.Outcome = OutcomeBlackjack
+		// 	}
 
-				}
-			}
-		}
+		// 	for hand.ChooseAction() {
+		// 		if hand.Action == None {
+		// 			hand.Action = player.Decide(g.output, g.input, player, g.Dealer.Hands[0].Cards[0], index)
+		// 		}
+		// 		if hand.Action == ActionHit {
+		// 			card := g.Deal(g.output)
+		// 			hand.Hit(g.output, card, player.Name)
+		// 		} else if hand.Action == ActionDoubleDown {
+		// 			player.Cash -= hand.Bet
+		// 			card := g.Deal(g.output)
+		// 			hand.DoubleDown(g.output, card, player.Name)
+
+		// 		} else if hand.Action == ActionSplit {
+		// 			card1 := g.Deal(g.output)
+		// 			card2 := g.Deal(g.output)
+		// 			player.Split(card1, card2)
+		// 		}
+		// 	}
+		// }
 	}
 
 	fmt.Fprintln(g.output, "")
@@ -516,31 +522,6 @@ func (p *Player) Broke() {
 
 }
 
-func (h *Hand) Hit(output io.Writer, card cards.Card, name string) {
-
-	h.Cards = append(h.Cards, card)
-	h.Action = None
-
-	fmt.Fprintln(output, h.HandString(name))
-	if h.Score() > 21 {
-		h.Outcome = OutcomeBust
-	}
-
-}
-
-func (h *Hand) DoubleDown(output io.Writer, card cards.Card, name string) {
-
-	h.Bet += h.Bet
-	h.Cards = append(h.Cards, card)
-	fmt.Fprintln(output, h.HandString(name))
-	h.Action = ActionStand
-
-}
-
-func (p Player) NextHandId() int {
-	return len(p.Hands) + 1
-}
-
 func (p *Player) Split(card1, card2 cards.Card) {
 
 	id := p.NextHandId()
@@ -562,6 +543,9 @@ func (p *Player) Split(card1, card2 cards.Card) {
 	// add cards to each hand
 	p.Hands[p.HandIndex].Cards = append(p.Hands[p.HandIndex].Cards, card1)
 	p.Hands[indexNewHand].Cards = append(p.Hands[indexNewHand].Cards, card2)
+	p.Hands[p.HandIndex].Action = None
+	p.Hands[indexNewHand].Action = None
+
 }
 
 func (p *Player) AddHand(hand *Hand) {
@@ -692,6 +676,31 @@ type Hand struct {
 	Action  Action
 	Outcome Outcome
 	Payout  int
+}
+
+func (h *Hand) Hit(output io.Writer, card cards.Card, name string) {
+
+	h.Cards = append(h.Cards, card)
+	h.Action = None
+
+	fmt.Fprintln(output, h.HandString(name))
+	if h.Score() > 21 {
+		h.Outcome = OutcomeBust
+	}
+
+}
+
+func (h *Hand) DoubleDown(output io.Writer, card cards.Card, name string) {
+
+	h.Bet += h.Bet
+	h.Cards = append(h.Cards, card)
+	fmt.Fprintln(output, h.HandString(name))
+	h.Action = ActionStand
+
+}
+
+func (p Player) NextHandId() int {
+	return len(p.Hands) + 1
 }
 
 func (h Hand) ChooseAction() bool {
@@ -845,7 +854,6 @@ func HumanBet(output io.Writer, input io.Reader, player *Player, index int) erro
 		}
 		player.Cash -= bet
 		player.Hands[player.HandIndex].Bet += bet
-		//player.HandBet += bet
 
 	}
 
@@ -853,18 +861,53 @@ func HumanBet(output io.Writer, input io.Reader, player *Player, index int) erro
 
 }
 
+func (g *Game) PlayHand(player *Player) {
+	for index, hand := range player.Hands {
+		if hand.Score() == 21 {
+			hand.Outcome = OutcomeBlackjack
+		}
+
+		for hand.ChooseAction() {
+			if hand.Action == None {
+				hand.Action = player.Decide(g.output, g.input, player, g.Dealer.Hands[0].Cards[0], index)
+			}
+
+			if hand.Action == ActionHit {
+				card := g.Deal(g.output)
+				hand.Hit(g.output, card, player.Name)
+			} else if hand.Action == ActionDoubleDown {
+				player.Cash -= hand.Bet
+				card := g.Deal(g.output)
+				hand.DoubleDown(g.output, card, player.Name)
+			} else if hand.Action == ActionSplit {
+				card1 := g.Deal(g.output)
+				card2 := g.Deal(g.output)
+				player.Split(card1, card2)
+				g.PlayHand(player)
+			}
+		}
+	}
+
+}
+
 // additional features
 // difficult to fake concreate...take interface instead
 // burn cards
 
-// 7. card counting
-// 6. split
-// 5. Double down
-// 4. basic strategy ai
-// 3. reshuffle
-// 2. betting - push outcome...just bet $10, handle no money player and dealer
-// 1. multi players
-// multi hands for split
-
-// fold
-// card counter
+// 17. ui
+// 16. client/server
+// 15. card counting ai
+// 14. ai betting - inc or dec depending on last outcome
+// 13. betting limits (max - min)
+// 12. card counting
+// 11. split
+// 10. Double down - done
+// 9. basic strategy ai - done
+// 8. reshuffle - done
+// 7. betting - push outcome...just bet $10, handle no money player and dealer - done
+// 6. multi players - done
+// 5. deal - done
+// 4. player - done
+// 3. game - done
+// 2. deck - done
+// 1. card - done

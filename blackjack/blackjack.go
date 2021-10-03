@@ -92,7 +92,7 @@ const (
 	PlayerTypeAiBasic
 )
 
-var PlayerTypeMap = map[PlayerType]func(io.Writer, io.Reader, *Player, cards.Card, int) Action{
+var PlayerTypeMap = map[PlayerType]func(io.Writer, io.Reader, *Player, cards.Card, int, CardCounter) Action{
 	PlayerTypeHuman:       HumanAction,
 	PlayerTypeAiStandOnly: AiActionStandOnly,
 	PlayerTypeAiBasic:     AiActionBasic,
@@ -104,7 +104,7 @@ var PlayerTypeInputMap = map[string]PlayerType{
 	"s": PlayerTypeAiStandOnly,
 }
 
-var PlayerTypeBetMap = map[PlayerType]func(io.Writer, io.Reader, *Player, int) error{
+var PlayerTypeBetMap = map[PlayerType]func(io.Writer, io.Reader, *Player, int, CardCounter) error{
 	PlayerTypeHuman:       HumanBet,
 	PlayerTypeAiStandOnly: AiBet,
 	PlayerTypeAiBasic:     AiBet,
@@ -122,6 +122,8 @@ type Game struct {
 	IncomingDeckPosition int
 	DeckCount            int
 	random               *rand.Rand
+	CountCards           func(cards.Card, int, int, int) (int, float64)
+	CardCounter          CardCounter
 }
 
 type Option func(*Game) error
@@ -177,6 +179,7 @@ func NewBlackjackGame(opts ...Option) (*Game, error) {
 		IsIncomingDeck: true,
 		DeckCount:      6,
 		random:         rand.New(rand.NewSource(time.Now().UnixNano())),
+		CountCards:     CountHiLo,
 	}
 
 	deck := cards.NewDeck(
@@ -278,7 +281,7 @@ func (g *Game) Betting() error {
 	index := 0
 	for _, player := range g.Players {
 
-		err = player.Bet(g.output, g.input, player, index)
+		err = player.Bet(g.output, g.input, player, index, g.CardCounter)
 		if err != nil {
 			return fmt.Errorf("unable to place bet for player: %s", player.Name)
 		}
@@ -311,6 +314,36 @@ func (g *Game) Start() {
 	fmt.Fprintln(g.output, "")
 
 	g.Outcome(g.output)
+
+}
+
+func (g *Game) PlayHand(player *Player) {
+	for index, hand := range player.Hands {
+		if hand.Score() == 21 {
+			hand.Outcome = OutcomeBlackjack
+		}
+
+		for hand.ChooseAction() {
+			if hand.Action == None {
+				fmt.Fprintln(g.output, hand.HandString(player.Name))
+				hand.Action = player.Decide(g.output, g.input, player, g.Dealer.Hands[0].Cards[0], index, g.CardCounter)
+			}
+
+			if hand.Action == ActionHit {
+				card := g.Deal(g.output)
+				hand.Hit(g.output, card, player.Name)
+			} else if hand.Action == ActionDoubleDown {
+				player.Cash -= hand.Bet
+				card := g.Deal(g.output)
+				hand.DoubleDown(g.output, card, player.Name)
+			} else if hand.Action == ActionSplit {
+				card1 := g.Deal(g.output)
+				card2 := g.Deal(g.output)
+				player.Split(g.output, card1, card2)
+				g.PlayHand(player)
+			}
+		}
+	}
 
 }
 
@@ -364,19 +397,27 @@ func (g *Game) Deal(output io.Writer) cards.Card {
 	card, g.Shoe.Cards = g.Shoe.Cards[0], g.Shoe.Cards[1:]
 	g.CardsDealt += 1
 
+	g.CardCounter.Count, g.CardCounter.TrueCount = g.CountCards(card, g.CardCounter.Count, g.CardsDealt, g.DeckCount)
+
 	if g.IsIncomingDeck {
 		if g.CardsDealt >= g.IncomingDeckPosition {
 			fmt.Fprintln(output, "\n******************************")
 			fmt.Fprintln(output, "***** New Deck Incoming ******")
 			fmt.Fprintln(output, "\n******************************")
 			g.Shoe = g.IncomingDeck()
-			g.CardsDealt = 0
+			g.ResetFieldsAfterIncomingDeck()
 		}
 
 	} else {
 		g.Shoe.Cards = append(g.Shoe.Cards, card)
 	}
 	return card
+}
+
+func (g *Game) ResetFieldsAfterIncomingDeck() {
+	g.CardsDealt = 0
+	g.CardCounter.Count = 0
+	g.CardCounter.TrueCount = 0
 }
 
 func (g *Game) OpeningDeal() {
@@ -464,8 +505,8 @@ func (g Game) IncomingDeck() cards.Deck {
 type Player struct {
 	Name          string
 	Action        Action
-	Bet           func(io.Writer, io.Reader, *Player, int) error
-	Decide        func(io.Writer, io.Reader, *Player, cards.Card, int) Action
+	Bet           func(io.Writer, io.Reader, *Player, int, CardCounter) error
+	Decide        func(io.Writer, io.Reader, *Player, cards.Card, int, CardCounter) Action
 	AiHandsToPlay int
 	Record        Record
 	Cash          int
@@ -755,6 +796,15 @@ func (r Record) RecordString() string {
 	return strings.Join(str, "")
 }
 
+type CardCounter struct {
+	Count     int
+	TrueCount float64
+}
+
+func (c CardCounter) String() string {
+	return "Count: " + strconv.Itoa(c.Count) + ", True Count: " + strconv.FormatFloat(c.TrueCount, 'f', -1, 64)
+}
+
 func min(a, b int) int {
 	if a < b {
 		return a
@@ -787,7 +837,7 @@ func ScoreDealerHoleCard(card cards.Card) int {
 	return score
 }
 
-func HumanAction(output io.Writer, input io.Reader, player *Player, dealerCard cards.Card, index int) Action {
+func HumanAction(output io.Writer, input io.Reader, player *Player, dealerCard cards.Card, index int, c CardCounter) Action {
 
 	var answer string
 
@@ -796,6 +846,9 @@ func HumanAction(output io.Writer, input io.Reader, player *Player, dealerCard c
 		for strings.ToLower(answer) != "h" && strings.ToLower(answer) != "s" {
 			fmt.Fprintln(output, "Please choose (H)it or (S)tand")
 			fmt.Fscanln(input, &answer)
+			if strings.ToLower(answer) == "c" {
+				fmt.Fprintln(output, c.String())
+			}
 		}
 	} else {
 		// check if split is ok
@@ -803,12 +856,18 @@ func HumanAction(output io.Writer, input io.Reader, player *Player, dealerCard c
 			for strings.ToLower(answer) != "h" && strings.ToLower(answer) != "p" && strings.ToLower(answer) != "d" && strings.ToLower(answer) != "s" {
 				fmt.Fprintln(output, "Please choose (H)it, S(P)lit, (D)ouble or (S)tand")
 				fmt.Fscanln(input, &answer)
+				if strings.ToLower(answer) == "c" {
+					fmt.Fprintln(output, c.String())
+				}
 			}
 		} else {
 			// double ok
 			for strings.ToLower(answer) != "h" && strings.ToLower(answer) != "d" && strings.ToLower(answer) != "s" {
 				fmt.Fprintln(output, "Please choose (H)it, (D)ouble or (S)tand")
 				fmt.Fscanln(input, &answer)
+				if strings.ToLower(answer) == "c" {
+					fmt.Fprintln(output, c.String())
+				}
 			}
 		}
 	}
@@ -816,7 +875,7 @@ func HumanAction(output io.Writer, input io.Reader, player *Player, dealerCard c
 	return ActionMap[strings.ToLower(answer)]
 }
 
-func HumanBet(output io.Writer, input io.Reader, player *Player, index int) error {
+func HumanBet(output io.Writer, input io.Reader, player *Player, index int, c CardCounter) error {
 
 	var answer string
 	var bet int = 0
@@ -824,9 +883,12 @@ func HumanBet(output io.Writer, input io.Reader, player *Player, index int) erro
 	fmt.Fprintln(output, "")
 	fmt.Fprintln(output, "****** BET or QUIT ******")
 
-	for answer != "b" && answer != "q" {
-		fmt.Fprintln(output, "Enter (b)et or (q)uit:")
+	for strings.ToLower(answer) != "b" && strings.ToLower(answer) != "q" {
+		fmt.Fprintln(output, "Enter (b)et or (q)uit")
 		fmt.Fscanln(input, &answer)
+		if strings.ToLower(answer) == "c" {
+			fmt.Fprintln(output, c.String())
+		}
 	}
 
 	switch strings.ToLower(answer) {
@@ -846,36 +908,6 @@ func HumanBet(output io.Writer, input io.Reader, player *Player, index int) erro
 
 }
 
-func (g *Game) PlayHand(player *Player) {
-	for index, hand := range player.Hands {
-		if hand.Score() == 21 {
-			hand.Outcome = OutcomeBlackjack
-		}
-
-		for hand.ChooseAction() {
-			if hand.Action == None {
-				fmt.Fprintln(g.output, hand.HandString(player.Name))
-				hand.Action = player.Decide(g.output, g.input, player, g.Dealer.Hands[0].Cards[0], index)
-			}
-
-			if hand.Action == ActionHit {
-				card := g.Deal(g.output)
-				hand.Hit(g.output, card, player.Name)
-			} else if hand.Action == ActionDoubleDown {
-				player.Cash -= hand.Bet
-				card := g.Deal(g.output)
-				hand.DoubleDown(g.output, card, player.Name)
-			} else if hand.Action == ActionSplit {
-				card1 := g.Deal(g.output)
-				card2 := g.Deal(g.output)
-				player.Split(g.output, card1, card2)
-				g.PlayHand(player)
-			}
-		}
-	}
-
-}
-
 // additional features
 // difficult to fake concreate...take interface instead
 // burn cards
@@ -886,7 +918,7 @@ func (g *Game) PlayHand(player *Player) {
 // 14. ai betting - inc or dec depending on last outcome
 // 13. betting limits (max - min)
 // 12. card counting
-// 11. split
+// 11. split - done
 // 10. Double down - done
 // 9. basic strategy ai - done
 // 8. reshuffle - done

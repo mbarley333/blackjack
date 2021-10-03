@@ -122,6 +122,8 @@ type Game struct {
 	IncomingDeckPosition int
 	DeckCount            int
 	random               *rand.Rand
+	CountCards           func(cards.Card, int, int, int) (int, float64)
+	CardCounter          *CardCounter
 }
 
 type Option func(*Game) error
@@ -400,13 +402,19 @@ func (g *Game) Deal(output io.Writer) cards.Card {
 			fmt.Fprintln(output, "***** New Deck Incoming ******")
 			fmt.Fprintln(output, "\n******************************")
 			g.Shoe = g.IncomingDeck()
-			g.CardsDealt = 0
+			g.ResetFieldsAfterIncomingDeck()
 		}
 
 	} else {
 		g.Shoe.Cards = append(g.Shoe.Cards, card)
 	}
 	return card
+}
+
+func (g *Game) ResetFieldsAfterIncomingDeck() {
+	g.CardsDealt = 0
+	g.CardCounter.Count = 0
+	g.CardCounter.TrueCount = 0
 }
 
 func (g *Game) OpeningDeal() {
@@ -783,6 +791,15 @@ func (r Record) RecordString() string {
 	}
 
 	return strings.Join(str, "")
+}
+
+type CardCounter struct {
+	Count     int
+	TrueCount float64
+}
+
+func (c CardCounter) String() string {
+	return "Count: " + strconv.Itoa(c.Count) + ", True Count:"
 }
 
 func min(a, b int) int {

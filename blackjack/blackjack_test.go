@@ -204,11 +204,11 @@ func TestNewBlackjackGame(t *testing.T) {
 		t.Fatalf("want: %q, got: %q", wantReport, gotReport)
 	}
 
-	wantDealerScore := 25
+	wantDealerScore := 15
 	gotDealerScore := g.Dealer.Hands[0].Score()
 
 	if wantDealerScore != gotDealerScore {
-		t.Fatalf("want: %d, got: %d", want, got)
+		t.Fatalf("want: %d, got: %d", wantDealerScore, gotDealerScore)
 	}
 }
 
@@ -471,6 +471,37 @@ func TestIncomingDeck(t *testing.T) {
 
 }
 
+func TestResetFieldsAfterIncomingDeck(t *testing.T) {
+	t.Parallel()
+
+	g := blackjack.Game{
+		CardsDealt: 55,
+		CardCounter: &blackjack.CardCounter{
+			Count:     7,
+			TrueCount: 3.0,
+		},
+	}
+	g.ResetFieldsAfterIncomingDeck()
+
+	want := &blackjack.CardCounter{
+		Count:     0,
+		TrueCount: 0,
+	}
+
+	got := g.CardCounter
+
+	if !cmp.Equal(want, got) {
+		t.Error(cmp.Diff(want, got))
+	}
+
+	wantCardsDealt := 0
+	gotCardsDealt := g.CardsDealt
+
+	if wantCardsDealt != gotCardsDealt {
+		t.Fatalf("want: %d, got: %d", wantCardsDealt, gotCardsDealt)
+	}
+
+}
 func TestScoreDealerHoleCard(t *testing.T) {
 
 	type testCase struct {

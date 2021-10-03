@@ -298,33 +298,7 @@ func (g *Game) Start() {
 	g.ShowPlayerCards(g.output)
 
 	for _, player := range g.Players {
-
 		g.PlayHand(player)
-
-		// for index, hand := range player.Hands {
-		// 	if hand.Score() == 21 {
-		// 		hand.Outcome = OutcomeBlackjack
-		// 	}
-
-		// 	for hand.ChooseAction() {
-		// 		if hand.Action == None {
-		// 			hand.Action = player.Decide(g.output, g.input, player, g.Dealer.Hands[0].Cards[0], index)
-		// 		}
-		// 		if hand.Action == ActionHit {
-		// 			card := g.Deal(g.output)
-		// 			hand.Hit(g.output, card, player.Name)
-		// 		} else if hand.Action == ActionDoubleDown {
-		// 			player.Cash -= hand.Bet
-		// 			card := g.Deal(g.output)
-		// 			hand.DoubleDown(g.output, card, player.Name)
-
-		// 		} else if hand.Action == ActionSplit {
-		// 			card1 := g.Deal(g.output)
-		// 			card2 := g.Deal(g.output)
-		// 			player.Split(card1, card2)
-		// 		}
-		// 	}
-		// }
 	}
 
 	fmt.Fprintln(g.output, "")
@@ -340,13 +314,18 @@ func (g *Game) Start() {
 }
 
 func (g *Game) DealerPlay() {
-	fmt.Fprintln(g.output, "****** DEALER'S TURN ******")
 
-	for g.Dealer.Hands[0].Score() <= 16 || (g.Dealer.Hands[0].Score() == 17 && g.Dealer.Hands[0].MinScore() != 17) {
-		card := g.Deal(g.output)
-		g.Dealer.Hands[0].Cards = append(g.Dealer.Hands[0].Cards, card)
+	dealerOk := g.IsDealerDraw()
+
+	if dealerOk {
+		fmt.Fprintln(g.output, "****** DEALER'S TURN ******")
+
+		for g.Dealer.Hands[0].Score() <= 16 || (g.Dealer.Hands[0].Score() == 17 && g.Dealer.Hands[0].MinScore() != 17) {
+			card := g.Deal(g.output)
+			g.Dealer.Hands[0].Cards = append(g.Dealer.Hands[0].Cards, card)
+		}
+		g.Dealer.Hands[0].Action = ActionStand
 	}
-	g.Dealer.Hands[0].Action = ActionStand
 }
 
 func (g Game) IsDealerDraw() bool {
@@ -522,7 +501,7 @@ func (p *Player) Broke() {
 
 }
 
-func (p *Player) Split(card1, card2 cards.Card) {
+func (p *Player) Split(output io.Writer, card1, card2 cards.Card) {
 
 	id := p.NextHandId()
 	hand := NewHand(id)
@@ -545,6 +524,9 @@ func (p *Player) Split(card1, card2 cards.Card) {
 	p.Hands[indexNewHand].Cards = append(p.Hands[indexNewHand].Cards, card2)
 	p.Hands[p.HandIndex].Action = None
 	p.Hands[indexNewHand].Action = None
+
+	fmt.Fprintln(output, p.Hands[p.HandIndex].HandString(p.Name))
+	fmt.Fprintln(output, p.Hands[indexNewHand].HandString(p.Name))
 
 }
 
@@ -683,7 +665,6 @@ func (h *Hand) Hit(output io.Writer, card cards.Card, name string) {
 	h.Cards = append(h.Cards, card)
 	h.Action = None
 
-	fmt.Fprintln(output, h.HandString(name))
 	if h.Score() > 21 {
 		h.Outcome = OutcomeBust
 	}
@@ -713,13 +694,13 @@ func (h Hand) HandString(name string) string {
 	var response string
 
 	if h.Action == ActionDoubleDown {
-		builder.WriteString(name + " has ???: " + "[" + h.Cards[0].String() + "]" + "[" + h.Cards[1].String() + "]" + "[???]\n")
+		builder.WriteString(name + " hand #" + strconv.Itoa(h.Id) + " has ???: " + "[" + h.Cards[0].String() + "]" + "[" + h.Cards[1].String() + "]" + "[???]\n")
 		response += builder.String()
 	} else {
 		for _, card := range h.Cards {
 			builder.WriteString("[" + card.String() + "]")
 		}
-		str := []string{name, " has ", fmt.Sprint(h.Score()), ": ", builder.String(), "\n"}
+		str := []string{name, " hand #", strconv.Itoa(h.Id), " has ", fmt.Sprint(h.Score()), ": ", builder.String(), "\n"}
 		response = strings.Join(str, "")
 	}
 
@@ -869,6 +850,7 @@ func (g *Game) PlayHand(player *Player) {
 
 		for hand.ChooseAction() {
 			if hand.Action == None {
+				fmt.Fprintln(g.output, hand.HandString(player.Name))
 				hand.Action = player.Decide(g.output, g.input, player, g.Dealer.Hands[0].Cards[0], index)
 			}
 
@@ -882,7 +864,7 @@ func (g *Game) PlayHand(player *Player) {
 			} else if hand.Action == ActionSplit {
 				card1 := g.Deal(g.output)
 				card2 := g.Deal(g.output)
-				player.Split(card1, card2)
+				player.Split(g.output, card1, card2)
 				g.PlayHand(player)
 			}
 		}

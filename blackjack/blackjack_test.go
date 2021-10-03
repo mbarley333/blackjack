@@ -687,7 +687,7 @@ func TestSplit(t *testing.T) {
 	card1 := g.Deal(output)
 	card2 := g.Deal(output)
 
-	g.Players[0].Split(card1, card2)
+	g.Players[0].Split(output, card1, card2)
 
 	want := &blackjack.Player{
 		Cash: 98,

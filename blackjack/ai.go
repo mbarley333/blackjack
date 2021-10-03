@@ -2,6 +2,7 @@ package blackjack
 
 import (
 	"cards"
+	"fmt"
 	"io"
 )
 
@@ -59,6 +60,7 @@ func AiBet(output io.Writer, input io.Reader, player *Player, index int) error {
 	if player.Record.HandsPlayed == player.AiHandsToPlay {
 		player.Action = ActionQuit
 	} else {
+		fmt.Println(player)
 		bet := 1
 		player.Cash -= bet
 		player.Hands[index].Bet += bet

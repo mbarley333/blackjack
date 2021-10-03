@@ -275,7 +275,8 @@ func (g *Game) PlayAgain() bool {
 func (g *Game) Betting() error {
 
 	var err error
-	for index, player := range g.Players {
+	index := 0
+	for _, player := range g.Players {
 
 		err = player.Bet(g.output, g.input, player, index)
 		if err != nil {
@@ -646,6 +647,9 @@ func NewPlayer(output io.Writer, input io.Reader) (Player, error) {
 		AiHandsToPlay: aiHands,
 		Bet:           playerTypeBet,
 		Cash:          100,
+		Hands: []*Hand{
+			{Id: 1},
+		},
 	}
 
 	return player, nil

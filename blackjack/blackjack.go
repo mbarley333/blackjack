@@ -314,6 +314,36 @@ func (g *Game) Start() {
 
 }
 
+func (g *Game) PlayHand(player *Player) {
+	for index, hand := range player.Hands {
+		if hand.Score() == 21 {
+			hand.Outcome = OutcomeBlackjack
+		}
+
+		for hand.ChooseAction() {
+			if hand.Action == None {
+				fmt.Fprintln(g.output, hand.HandString(player.Name))
+				hand.Action = player.Decide(g.output, g.input, player, g.Dealer.Hands[0].Cards[0], index)
+			}
+
+			if hand.Action == ActionHit {
+				card := g.Deal(g.output)
+				hand.Hit(g.output, card, player.Name)
+			} else if hand.Action == ActionDoubleDown {
+				player.Cash -= hand.Bet
+				card := g.Deal(g.output)
+				hand.DoubleDown(g.output, card, player.Name)
+			} else if hand.Action == ActionSplit {
+				card1 := g.Deal(g.output)
+				card2 := g.Deal(g.output)
+				player.Split(g.output, card1, card2)
+				g.PlayHand(player)
+			}
+		}
+	}
+
+}
+
 func (g *Game) DealerPlay() {
 
 	dealerOk := g.IsDealerDraw()
@@ -843,36 +873,6 @@ func HumanBet(output io.Writer, input io.Reader, player *Player, index int) erro
 	}
 
 	return nil
-
-}
-
-func (g *Game) PlayHand(player *Player) {
-	for index, hand := range player.Hands {
-		if hand.Score() == 21 {
-			hand.Outcome = OutcomeBlackjack
-		}
-
-		for hand.ChooseAction() {
-			if hand.Action == None {
-				fmt.Fprintln(g.output, hand.HandString(player.Name))
-				hand.Action = player.Decide(g.output, g.input, player, g.Dealer.Hands[0].Cards[0], index)
-			}
-
-			if hand.Action == ActionHit {
-				card := g.Deal(g.output)
-				hand.Hit(g.output, card, player.Name)
-			} else if hand.Action == ActionDoubleDown {
-				player.Cash -= hand.Bet
-				card := g.Deal(g.output)
-				hand.DoubleDown(g.output, card, player.Name)
-			} else if hand.Action == ActionSplit {
-				card1 := g.Deal(g.output)
-				card2 := g.Deal(g.output)
-				player.Split(g.output, card1, card2)
-				g.PlayHand(player)
-			}
-		}
-	}
 
 }
 

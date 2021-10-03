@@ -12,17 +12,27 @@ func AiActionBasic(output io.Writer, input io.Reader, player *Player, dealerCard
 	handValue := player.Hands[index].Score()
 	dealerCardValue := ScoreDealerHoleCard(dealerCard)
 
-	var isSoft bool
+	isSoft := false
+	isSplitable := false
+
+	if player.Hands[index].Cards[0].Rank == player.Hands[index].Cards[1].Rank {
+		isSplitable = true
+	}
 
 	for _, card := range player.Hands[index].Cards {
-
 		length := len(player.Hands[index].Cards)
 		if card.Rank == cards.Ace && length == 2 {
 			isSoft = true
 		}
 	}
 
-	if (handValue == 10 && dealerCardValue < handValue || handValue == 11 && dealerCardValue < handValue) && player.Cash > player.Hands[index].Bet {
+	// split aces and eights
+	if isSplitable && player.Hands[index].Cards[0].Rank == cards.Ace || player.Hands[index].Cards[0].Rank == cards.Eight {
+		action = ActionSplit
+		// split all pairs when dealer showing 6 or less AND pair != 4,5,10
+	} else if isSplitable && player.Hands[index].Cards[0].Rank != cards.Five && player.Hands[index].Cards[0].Rank != cards.Four && player.Hands[index].Cards[0].Rank <= 9 && dealerCardValue <= 6 {
+		action = ActionSplit
+	} else if (handValue == 10 && dealerCardValue < handValue || handValue == 11 && dealerCardValue < handValue) && player.Cash > player.Hands[index].Bet {
 		action = ActionDoubleDown
 	} else if handValue == 9 && dealerCardValue >= 3 && dealerCardValue <= 6 && player.Cash > player.Hands[index].Bet {
 		action = ActionDoubleDown

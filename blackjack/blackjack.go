@@ -233,7 +233,7 @@ func RunCLI() {
 		g.Start()
 	}
 
-	fmt.Println("No players left in game.  Exiting...")
+	fmt.Fprintln(g.output, "No players left in game.  Exiting...")
 }
 
 func (g *Game) AddPlayer(player *Player) {

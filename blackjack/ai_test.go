@@ -126,6 +126,24 @@ func TestAiBasicAction(t *testing.T) {
 			action:      blackjack.ActionHit,
 			description: "Hard 12 to 16 w/ Dealer >= 7",
 		},
+		{
+			playerCards: []cards.Card{{Rank: cards.Ace, Suit: cards.Club}, {Rank: cards.Ace, Suit: cards.Club}},
+			dealerCard:  []cards.Card{{Rank: cards.Seven, Suit: cards.Club}},
+			action:      blackjack.ActionSplit,
+			description: "Split Aces",
+		},
+		{
+			playerCards: []cards.Card{{Rank: cards.Ten, Suit: cards.Club}, {Rank: cards.Ten, Suit: cards.Club}},
+			dealerCard:  []cards.Card{{Rank: cards.Seven, Suit: cards.Club}},
+			action:      blackjack.ActionStand,
+			description: "No Split Tens",
+		},
+		{
+			playerCards: []cards.Card{{Rank: cards.Seven, Suit: cards.Club}, {Rank: cards.Seven, Suit: cards.Club}},
+			dealerCard:  []cards.Card{{Rank: cards.Six, Suit: cards.Club}},
+			action:      blackjack.ActionSplit,
+			description: "Split Seven with Dealer showing Six",
+		},
 	}
 
 	output := &bytes.Buffer{}

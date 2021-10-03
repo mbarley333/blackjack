@@ -886,7 +886,7 @@ func (g *Game) PlayHand(player *Player) {
 // 14. ai betting - inc or dec depending on last outcome
 // 13. betting limits (max - min)
 // 12. card counting
-// 11. split
+// 11. split - done
 // 10. Double down - done
 // 9. basic strategy ai - done
 // 8. reshuffle - done

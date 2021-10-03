@@ -242,6 +242,8 @@ func TestMultiPlayers(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	g.DeckCount = 1
+
 	player := &blackjack.Player{
 		Name:   "Planty",
 		Action: blackjack.None,
@@ -476,14 +478,14 @@ func TestResetFieldsAfterIncomingDeck(t *testing.T) {
 
 	g := blackjack.Game{
 		CardsDealt: 55,
-		CardCounter: &blackjack.CardCounter{
+		CardCounter: blackjack.CardCounter{
 			Count:     7,
 			TrueCount: 3.0,
 		},
 	}
 	g.ResetFieldsAfterIncomingDeck()
 
-	want := &blackjack.CardCounter{
+	want := blackjack.CardCounter{
 		Count:     0,
 		TrueCount: 0,
 	}

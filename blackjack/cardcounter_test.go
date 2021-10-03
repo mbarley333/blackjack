@@ -32,15 +32,18 @@ func TestCardCounting(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// need a card
-	// need to assign a value based on count
-	card := g.Deal(output)
 	g.CountCards = blackjack.CountHiLo
-	g.CardCounter.Count = 2
 	g.DeckCount = 1
-	g.CardsDealt = 26
+	g.CardsDealt = 25
 
-	g.CardCounter.Count, g.CardCounter.TrueCount = g.CountCards(card, g.CardCounter.Count, g.CardsDealt, g.DeckCount)
+	c := blackjack.CardCounter{
+		Count:     2,
+		TrueCount: 0,
+	}
+
+	g.CardCounter = c
+
+	_ = g.Deal(output)
 
 	want := 1
 	got := g.CardCounter.Count

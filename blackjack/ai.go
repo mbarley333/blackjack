@@ -6,7 +6,7 @@ import (
 	"io"
 )
 
-func AiActionBasic(output io.Writer, input io.Reader, player *Player, dealerCard cards.Card, index int) Action {
+func AiActionBasic(output io.Writer, input io.Reader, player *Player, dealerCard cards.Card, index int, c CardCounter) Action {
 
 	var action Action
 	handValue := player.Hands[index].Score()
@@ -60,12 +60,12 @@ func AiActionBasic(output io.Writer, input io.Reader, player *Player, dealerCard
 	return action
 }
 
-func AiActionStandOnly(output io.Writer, input io.Reader, player *Player, dealerCard cards.Card, index int) Action {
+func AiActionStandOnly(output io.Writer, input io.Reader, player *Player, dealerCard cards.Card, index int, c CardCounter) Action {
 
 	return ActionStand
 }
 
-func AiBet(output io.Writer, input io.Reader, player *Player, index int) error {
+func AiBet(output io.Writer, input io.Reader, player *Player, index int, c CardCounter) error {
 
 	if player.Record.HandsPlayed == player.AiHandsToPlay {
 		player.Action = ActionQuit

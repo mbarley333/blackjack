@@ -921,7 +921,7 @@ func HumanBet(output io.Writer, input io.Reader, player *Player, index int, c Ca
 // 15. card counting ai
 // 14. ai betting - inc or dec depending on last outcome
 // 13. betting limits (max - min)
-// 12. card counting
+// 12. card counting - done
 // 11. split - done
 // 10. Double down - done
 // 9. basic strategy ai - done

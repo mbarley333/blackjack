@@ -4,7 +4,7 @@ Blackjack is a command line version of the classic game written in Go
 
 Built with Aloha in Hawaii 🌊
 
-Thank you to @bitfield for his all of his mentoring on my Go journey!
+Thank you to @bitfield for all of his mentoring on my Go journey!
 
 
 # Installation

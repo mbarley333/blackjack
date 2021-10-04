@@ -4,7 +4,7 @@ Blackjack is a command line version of the classic game written in Go
 
 Built with Aloha in Hawaii 🌊
 
-Thank you to @bitfield for his mentoring on my Go journey!
+Thank you to @bitfield for his all of his mentoring on my Go journey!
 
 
 # Installation
@@ -31,16 +31,36 @@ Thank you to @bitfield for his mentoring on my Go journey!
 ./blackjack
 ```
 * Enter number of players
-* Enter name for player
+* Enter name of player
 * Select either AI or Human player
 * For AI, enter number of hands to play
-* From any command line, as a human player, enter "c" to get the count and true count
+* From any command line, as a human player, enter "c" to get the card count and the true count
 
 
-# Adding custom AI
+# Adding a custom AI
 * Clone repo to desktop and cd
 * Add new AI player algo to blackjack/ai.go
 * Open blackjack/blackjack.go
+* Update the x value for the PlayerTypeInput map
+* Update the PlayerTypeAiCustom value for the PlayerTypeBetMap
+* Build
+
+```bash
+
+var PlayerTypeInputMap = map[string]PlayerType{
+	"h": PlayerTypeHuman,
+	"b": PlayerTypeAiBasic,
+	"s": PlayerTypeAiStandOnly,
+	"x": PlayerTypeAiBasic,
+}
+
+var PlayerTypeBetMap = map[PlayerType]func(io.Writer, io.Reader, *Player, int, CardCounter) error{
+	PlayerTypeHuman:       HumanBet,
+	PlayerTypeAiStandOnly: AiBet,
+	PlayerTypeAiBasic:     AiBet,
+	PlayerTypeAiCustom:    AiBet,
+  
+```
 
 
 

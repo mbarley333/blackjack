@@ -37,10 +37,30 @@ Thank you to @bitfield for his mentoring on my Go journey!
 * From any command line, as a human player, enter "c" to get the count and true count
 
 
-# Adding custom AI
+# Adding a custom AI
 * Clone repo to desktop and cd
 * Add new AI player algo to blackjack/ai.go
 * Open blackjack/blackjack.go
+* Update the x value for the PlayerTypeInput map
+* Update the PlayerTypeAiCustom value for the PlayerTypeBetMap
+* Build
+
+```bash
+
+var PlayerTypeInputMap = map[string]PlayerType{
+	"h": PlayerTypeHuman,
+	"b": PlayerTypeAiBasic,
+	"s": PlayerTypeAiStandOnly,
+	"x": PlayerTypeAiBasic,
+}
+
+var PlayerTypeBetMap = map[PlayerType]func(io.Writer, io.Reader, *Player, int, CardCounter) error{
+	PlayerTypeHuman:       HumanBet,
+	PlayerTypeAiStandOnly: AiBet,
+	PlayerTypeAiBasic:     AiBet,
+	PlayerTypeAiCustom:    AiBet,
+  
+```
 
 
 

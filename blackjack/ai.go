@@ -2,7 +2,6 @@ package blackjack
 
 import (
 	"cards"
-	"fmt"
 	"io"
 )
 
@@ -27,10 +26,10 @@ func AiActionBasic(output io.Writer, input io.Reader, player *Player, dealerCard
 	}
 
 	// split aces and eights
-	if isSplitable && player.Hands[index].Cards[0].Rank == cards.Ace || player.Hands[index].Cards[0].Rank == cards.Eight {
+	if isSplitable && (player.Hands[index].Cards[0].Rank == cards.Ace || player.Hands[index].Cards[0].Rank == cards.Eight) {
 		action = ActionSplit
 		// split all pairs when dealer showing 6 or less AND pair != 4,5,10
-	} else if isSplitable && player.Hands[index].Cards[0].Rank != cards.Five && player.Hands[index].Cards[0].Rank != cards.Four && player.Hands[index].Cards[0].Rank <= 9 && dealerCardValue <= 6 {
+	} else if isSplitable && (player.Hands[index].Cards[0].Rank != cards.Five && player.Hands[index].Cards[0].Rank != cards.Four && player.Hands[index].Cards[0].Rank <= 9 && dealerCardValue <= 6) {
 		action = ActionSplit
 	} else if (handValue == 10 && dealerCardValue < handValue || handValue == 11 && dealerCardValue < handValue) && player.Cash > player.Hands[index].Bet {
 		action = ActionDoubleDown
@@ -56,8 +55,12 @@ func AiActionBasic(output io.Writer, input io.Reader, player *Player, dealerCard
 		action = ActionStand
 	} else if handValue >= 12 && handValue <= 16 && dealerCardValue >= 7 {
 		action = ActionHit
+	} else {
+		action = ActionStand
 	}
+
 	return action
+
 }
 
 func AiActionStandOnly(output io.Writer, input io.Reader, player *Player, dealerCard cards.Card, index int, c CardCounter) Action {
@@ -70,7 +73,6 @@ func AiBet(output io.Writer, input io.Reader, player *Player, index int, c CardC
 	if player.Record.HandsPlayed == player.AiHandsToPlay {
 		player.Action = ActionQuit
 	} else {
-		fmt.Println(player)
 		bet := 1
 		player.Cash -= bet
 		player.Hands[index].Bet += bet

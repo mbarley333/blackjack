@@ -133,6 +133,12 @@ func TestAiBasicAction(t *testing.T) {
 			description: "Split Aces",
 		},
 		{
+			playerCards: []cards.Card{{Rank: cards.Eight, Suit: cards.Club}, {Rank: cards.Eight, Suit: cards.Club}},
+			dealerCard:  []cards.Card{{Rank: cards.Seven, Suit: cards.Club}},
+			action:      blackjack.ActionSplit,
+			description: "Split Eights",
+		},
+		{
 			playerCards: []cards.Card{{Rank: cards.Ten, Suit: cards.Club}, {Rank: cards.Ten, Suit: cards.Club}},
 			dealerCard:  []cards.Card{{Rank: cards.Seven, Suit: cards.Club}},
 			action:      blackjack.ActionStand,
@@ -175,7 +181,7 @@ func TestAiBasicAction(t *testing.T) {
 		want := tc.action
 
 		index := 0
-		got := g.Players[0].Decide(output, input, g.Players[0], g.Dealer.Hands[0].Cards[0], index)
+		got := g.Players[0].Decide(output, input, g.Players[0], g.Dealer.Hands[0].Cards[0], index, g.CardCounter)
 
 		if want != got {
 			t.Fatalf("%q: wanted: %q, got: %q", tc.description, want.String(), got.String())

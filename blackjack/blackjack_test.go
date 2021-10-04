@@ -720,7 +720,9 @@ func TestSplit(t *testing.T) {
 	card1 := g.Deal(output)
 	card2 := g.Deal(output)
 
-	g.Players[0].Split(output, card1, card2)
+	index := 0
+
+	g.Players[0].Split(output, card1, card2, index)
 
 	want := &blackjack.Player{
 		Cash: 98,
@@ -758,8 +760,8 @@ func TestPlayHand(t *testing.T) {
 	input := strings.NewReader("s\ns")
 
 	stack := []cards.Card{
-		{Rank: cards.Six, Suit: cards.Heart},
-		{Rank: cards.Six, Suit: cards.Club},
+		{Rank: cards.Ten, Suit: cards.Heart},
+		{Rank: cards.Ten, Suit: cards.Club},
 		{Rank: cards.Nine, Suit: cards.Spade},
 		{Rank: cards.Four, Suit: cards.Diamond},
 	}
@@ -780,15 +782,15 @@ func TestPlayHand(t *testing.T) {
 	p := &blackjack.Player{
 		Name:   "test",
 		Cash:   99,
-		Decide: blackjack.HumanAction,
+		Decide: blackjack.AiActionBasic,
 		Hands: []*blackjack.Hand{
 			{
 				Id:     1,
 				Bet:    1,
 				Action: blackjack.ActionSplit,
 				Cards: []cards.Card{
-					{Rank: cards.Three, Suit: cards.Club},
-					{Rank: cards.Three, Suit: cards.Club},
+					{Rank: cards.Eight, Suit: cards.Club},
+					{Rank: cards.Eight, Suit: cards.Heart},
 				},
 			},
 		},
@@ -800,8 +802,8 @@ func TestPlayHand(t *testing.T) {
 		Hands: []*blackjack.Hand{
 			{
 				Cards: []cards.Card{
-					{Rank: cards.Three, Suit: cards.Club},
-					{Rank: cards.Three, Suit: cards.Club},
+					{Rank: cards.Ten, Suit: cards.Club},
+					{Rank: cards.Eight, Suit: cards.Club},
 				},
 				Id:     1,
 				Action: blackjack.ActionStand,
@@ -817,8 +819,8 @@ func TestPlayHand(t *testing.T) {
 		Hands: []*blackjack.Hand{
 			{
 				Cards: []cards.Card{
-					{Rank: cards.Three, Suit: cards.Club},
-					{Rank: cards.Six, Suit: cards.Heart},
+					{Rank: cards.Eight, Suit: cards.Club},
+					{Rank: cards.Ten, Suit: cards.Heart},
 				},
 				Id:     1,
 				Action: blackjack.ActionStand,
@@ -826,8 +828,8 @@ func TestPlayHand(t *testing.T) {
 			},
 			{
 				Cards: []cards.Card{
-					{Rank: cards.Three, Suit: cards.Club},
-					{Rank: cards.Six, Suit: cards.Club},
+					{Rank: cards.Eight, Suit: cards.Heart},
+					{Rank: cards.Ten, Suit: cards.Club},
 				},
 				Id:     2,
 				Action: blackjack.ActionStand,

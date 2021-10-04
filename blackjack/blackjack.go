@@ -90,24 +90,28 @@ const (
 	PlayerTypeHuman PlayerType = iota
 	PlayerTypeAiStandOnly
 	PlayerTypeAiBasic
+	PlayerTypeAiCustom
 )
 
 var PlayerTypeMap = map[PlayerType]func(io.Writer, io.Reader, *Player, cards.Card, int, CardCounter) Action{
 	PlayerTypeHuman:       HumanAction,
 	PlayerTypeAiStandOnly: AiActionStandOnly,
 	PlayerTypeAiBasic:     AiActionBasic,
+	PlayerTypeAiCustom:    AiActionBasic,
 }
 
 var PlayerTypeInputMap = map[string]PlayerType{
 	"h": PlayerTypeHuman,
 	"b": PlayerTypeAiBasic,
 	"s": PlayerTypeAiStandOnly,
+	"x": PlayerTypeAiBasic,
 }
 
 var PlayerTypeBetMap = map[PlayerType]func(io.Writer, io.Reader, *Player, int, CardCounter) error{
 	PlayerTypeHuman:       HumanBet,
 	PlayerTypeAiStandOnly: AiBet,
 	PlayerTypeAiBasic:     AiBet,
+	PlayerTypeAiCustom:    AiBet,
 }
 
 type Game struct {
@@ -664,8 +668,8 @@ func NewPlayer(output io.Writer, input io.Reader) (Player, error) {
 	}
 
 	if strings.ToLower(playerTypeInput) == "a" {
-		for strings.ToLower(playerTypeInput) != "b" && strings.ToLower(playerTypeInput) != "s" {
-			fmt.Fprintln(output, "Select AI Type: (B)asic or (S)tandOnly")
+		for strings.ToLower(playerTypeInput) != "b" && strings.ToLower(playerTypeInput) != "x" {
+			fmt.Fprintln(output, "Select AI Type: (B)asic, (S)tandOnly or (X)custom")
 			fmt.Fscanln(input, &playerTypeInput)
 		}
 	}

@@ -325,6 +325,7 @@ func (g *Game) PlayHand(player *Player) {
 
 		for hand.ChooseAction() {
 			if hand.Action == None {
+
 				fmt.Fprintln(g.output, hand.HandString(player.Name))
 				hand.Action = player.Decide(g.output, g.input, player, g.Dealer.Hands[0].Cards[0], index, g.CardCounter)
 			}
@@ -339,8 +340,9 @@ func (g *Game) PlayHand(player *Player) {
 			} else if hand.Action == ActionSplit {
 				card1 := g.Deal(g.output)
 				card2 := g.Deal(g.output)
-				player.Split(g.output, card1, card2)
+				player.Split(g.output, card1, card2, index)
 				g.PlayHand(player)
+
 			}
 		}
 	}
@@ -543,31 +545,33 @@ func (p *Player) Broke() {
 
 }
 
-func (p *Player) Split(output io.Writer, card1, card2 cards.Card) {
+func (p *Player) Split(output io.Writer, card1, card2 cards.Card, index int) {
 
 	id := p.NextHandId()
 	hand := NewHand(id)
 	p.AddHand(hand)
 	indexNewHand := len(p.Hands) - 1
+	//indexNewHand := index + 1
 
 	// take last card in original hand and append to the new split hand
-	card := p.Hands[p.HandIndex].Cards[1]
+	card := p.Hands[index].Cards[1]
 	p.Hands[indexNewHand].Cards = append(p.Hands[indexNewHand].Cards, card)
 
 	// reset slice on original hand to only have the first card
-	p.Hands[p.HandIndex].Cards = p.Hands[p.HandIndex].Cards[:len(p.Hands[p.HandIndex].Cards)-1]
+	p.Hands[index].Cards = p.Hands[index].Cards[:len(p.Hands[index].Cards)-1]
 
 	// mirror bet on new hand
-	p.Hands[indexNewHand].Bet += p.Hands[p.HandIndex].Bet
-	p.Cash -= p.Hands[p.HandIndex].Bet
+	p.Hands[indexNewHand].Bet += p.Hands[index].Bet
+	p.Cash -= p.Hands[index].Bet
 
 	// add cards to each hand
-	p.Hands[p.HandIndex].Cards = append(p.Hands[p.HandIndex].Cards, card1)
+	p.Hands[index].Cards = append(p.Hands[index].Cards, card1)
 	p.Hands[indexNewHand].Cards = append(p.Hands[indexNewHand].Cards, card2)
-	p.Hands[p.HandIndex].Action = None
+	p.Hands[index].Action = None
+
 	p.Hands[indexNewHand].Action = None
 
-	fmt.Fprintln(output, p.Hands[p.HandIndex].HandString(p.Name))
+	fmt.Fprintln(output, p.Hands[index].HandString(p.Name))
 	fmt.Fprintln(output, p.Hands[indexNewHand].HandString(p.Name))
 
 }

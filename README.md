@@ -22,6 +22,7 @@ Thank you to @bitfield for his all of his mentoring on my Go journey!
 * Double down
 * Minimum bet $1
 * Minimum 83% deck penetration before reshuffle
+* Six deck shoe
 * Card counting allowed and provided via HiLo method
 * AI Players (Basic Strategy or Stand Only)
 

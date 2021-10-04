@@ -31,10 +31,10 @@ Thank you to @bitfield for his all of his mentoring on my Go journey!
 ./blackjack
 ```
 * Enter number of players
-* Enter name for player
+* Enter name of player
 * Select either AI or Human player
 * For AI, enter number of hands to play
-* From any command line, as a human player, enter "c" to get the count and true count
+* From any command line, as a human player, enter "c" to get the card count and the true count
 
 
 # Adding a custom AI

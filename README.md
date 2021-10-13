@@ -25,6 +25,7 @@ Thank you to @bitfield for all of his mentoring on my Go journey!
 * Six deck shoe
 * Card counting allowed and provided via HiLo method
 * AI Players (Basic Strategy or Stand Only)
+* Hints for Hit, Stand, Double and Split decisions
 
 
 # Getting started

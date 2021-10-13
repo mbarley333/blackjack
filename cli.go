@@ -542,6 +542,6 @@ func help() {
 	  deckCount        Number of decks in shoe.  Default is 6
 	
 	Usage:
-	./blackjack -humanPlayers 1 -aiPlayers 1 deckCount 7
+	./blackjack -humanPlayers 1 -aiPlayers 1 -deckCount 7
 	`)
 }

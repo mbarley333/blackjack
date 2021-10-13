@@ -111,8 +111,6 @@ var PlayerTypeInputMap = map[string]PlayerType{
 	"x": PlayerTypeAiBasic,
 }
 
-//player *Player, index int, action Action, bet int, c CardCounter
-
 var PlayerTypeBetMap = map[PlayerType]func(*Game) error{
 	PlayerTypeHuman:       HumanBet,
 	PlayerTypeAiStandOnly: AiBet,
@@ -179,7 +177,7 @@ var DialogMap = map[Dialog]string{
 
 var DialogPlayerMessage = map[Dialog]string{
 	DialogNone:                "Invalid Dialog",
-	DialogBetOrQuit:           "would you like to (B)et or (Q)uit?",
+	DialogBetOrQuit:           "enter (B)et or (Q)uit [b]:",
 	DialogPlaceYourBet:        "place your bet",
 	DialogHitOrStand:          "please choose (H)it or (S)tand: ",
 	DialogHitSplitDoubleStand: "please choose (H)it, S(P)lit, (D)ouble or (S)tand: ",
@@ -194,7 +192,6 @@ type Game struct {
 	Players              []*Player
 	Dealer               *Player
 	Shoe                 cards.Deck
-	Random               rand.Rand
 	output               io.Writer
 	input                io.Reader
 	IsIncomingDeck       bool
@@ -371,9 +368,9 @@ func (g *Game) Deal(output io.Writer) cards.Card {
 
 	if g.IsIncomingDeck {
 		if g.CardsDealt >= g.IncomingDeckPosition {
-			fmt.Fprintln(output, "\n******************************")
-			fmt.Fprintln(output, "***** New Deck Incoming ******")
-			fmt.Fprintln(output, "\n******************************")
+			g.StageMessage = "NEW DECK INCOMING"
+			RenderStageMessage(g.output, g.StageMessage)
+
 			g.Shoe = g.IncomingDeck()
 			g.ResetFieldsAfterIncomingDeck()
 		}
@@ -510,8 +507,11 @@ func (p *Player) Split(output io.Writer, card1, card2 cards.Card, index int) {
 
 	p.Hands[indexNewHand].Action = None
 
-	fmt.Fprintln(output, p.Hands[index].HandString(p.Name))
-	fmt.Fprintln(output, p.Hands[indexNewHand].HandString(p.Name))
+	p.Message = p.Hands[index].HandStringMulti(p.Name)
+	RenderPlayerMessage(output, p)
+
+	p.Message = p.Hands[indexNewHand].HandStringMulti(p.Name)
+	RenderPlayerMessage(output, p)
 
 }
 

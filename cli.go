@@ -34,7 +34,7 @@ func RunCLI() {
 		g.Betting()
 		g.Players = g.RemoveQuitPlayers()
 		if g.PlayAgain() {
-			g.Start()
+
 			g.OpeningDeal()
 			g.Deciding()
 			g.DealerPlay()
@@ -105,7 +105,7 @@ func (g *Game) OpeningDeal() {
 			player.Message = player.Name + " is dealt the [" + card.String() + "]\n"
 
 			RenderPlayerMessage(g.output, player)
-			time.Sleep(1 * time.Second)
+			time.Sleep(750 * time.Millisecond)
 
 		}
 		card := g.Deal(g.output)
@@ -117,7 +117,7 @@ func (g *Game) OpeningDeal() {
 			g.Dealer.Message = "Dealer is dealt a [" + card.String() + "]\n"
 		}
 		RenderPlayerMessage(g.output, g.Dealer)
-		time.Sleep(2 * time.Second)
+		time.Sleep(750 * time.Millisecond)
 
 	}
 
@@ -151,6 +151,41 @@ func NewHumanPlayer(output io.Writer, input io.Reader, index int) *Player {
 
 }
 
+func NewAi(output io.Writer, input io.Reader, index int) *Player {
+	var name string
+	var playerTypeInput string
+
+	defaultName := "AiPlayer" + strconv.Itoa(index+1)
+
+	fmt.Fprintf(output, "%s enter your name [%s]: ", defaultName, defaultName)
+	fmt.Fscanln(input, &name)
+	if name == "" {
+		name = defaultName
+	}
+
+	for strings.ToLower(playerTypeInput) != "b" && strings.ToLower(playerTypeInput) != "s" && strings.ToLower(playerTypeInput) != "x" {
+		fmt.Fprintf(output, "Select AI Type (B)asic Strategy, (S)tandOnly or (X)custom [B]: ")
+		fmt.Fscanln(input, &playerTypeInput)
+		if playerTypeInput == "" {
+			playerTypeInput = "b"
+		}
+
+	}
+
+	player := &Player{
+
+		Name: name,
+
+		Cash: 100,
+		Hands: []*Hand{
+			{Id: 1},
+		},
+	}
+
+	return player
+
+}
+
 func NewAiPlayer(output io.Writer, input io.Reader, index int) *Player {
 	var name string
 	var playerTypeInput string
@@ -158,18 +193,19 @@ func NewAiPlayer(output io.Writer, input io.Reader, index int) *Player {
 
 	defaultName := "AiPlayer" + strconv.Itoa(index+1)
 
-	fmt.Fprintf(output, "%s enter your name[%s]: ", defaultName, defaultName)
+	fmt.Fprintf(output, "%s enter your name [%s]: ", defaultName, defaultName)
 	fmt.Fscanln(input, &name)
 	if name == "" {
 		name = defaultName
 	}
 
 	for strings.ToLower(playerTypeInput) != "b" && strings.ToLower(playerTypeInput) != "s" && strings.ToLower(playerTypeInput) != "x" {
-		fmt.Fprintf(output, "Select AI Type [%s]: (B)asic Strategy, (S)tandOnly or (X)custom: ", "b")
+		fmt.Fprintf(output, "Select AI Type (B)asic Strategy, (S)tandOnly or (X)custom [B]: ")
 		fmt.Fscanln(input, &playerTypeInput)
 		if playerTypeInput == "" {
 			playerTypeInput = "b"
 		}
+
 	}
 
 	playerTypeInputValue := PlayerTypeInputMap[strings.ToLower(playerTypeInput)]
@@ -178,13 +214,12 @@ func NewAiPlayer(output io.Writer, input io.Reader, index int) *Player {
 
 	aiHands := 0
 	var err error
-	if strings.ToLower(playerTypeInput) != "h" {
-		fmt.Fprintln(output, "Enter number of rounds the AI plays: ")
-		fmt.Fscanln(input, &aiRoundsToPlay)
-		aiHands, err = strconv.Atoi(aiRoundsToPlay)
-		if err != nil {
-			return nil
-		}
+
+	fmt.Fprint(output, "Enter number of rounds the AI plays: ")
+	fmt.Fscan(input, &aiRoundsToPlay)
+	aiHands, err = strconv.Atoi(aiRoundsToPlay)
+	if err != nil {
+		return nil
 	}
 
 	player := &Player{
@@ -200,13 +235,6 @@ func NewAiPlayer(output io.Writer, input io.Reader, index int) *Player {
 	}
 
 	return player
-
-}
-
-func (g *Game) Start() {
-
-	g.SetStage(StageStart)
-	RenderGameCli(g.output, g.input, g)
 
 }
 
@@ -248,20 +276,22 @@ func (g *Game) PlayHand(player *Player) error {
 
 		for hand.ChooseAction() {
 			if hand.Action == None {
-				//fmt.Fprintln(g.output, hand.HandString(player.Name))
 				player.Message = hand.HandString(player.Name)
 				RenderPlayerMessage(g.output, player)
 
 				hand.Action = player.Decide(g.output, g.input, player, g.Dealer.Hands[0].Cards[0], index, g.CardCounter, g.Stage)
-
 			}
 			if hand.Action == ActionHit {
 				card := g.Deal(g.output)
+				player.Message = player.Name + " is dealt the [" + card.String() + "]\n\n"
 				hand.Hit(g.output, card, player.Name)
+				RenderPlayerMessage(g.output, player)
 			} else if hand.Action == ActionDoubleDown {
 				player.Cash -= hand.Bet
 				card := g.Deal(g.output)
+				player.Message = player.Name + " is dealt [???]\n\n"
 				hand.DoubleDown(g.output, card, player.Name)
+				RenderPlayerMessage(g.output, player)
 			} else if hand.Action == ActionSplit {
 				card1 := g.Deal(g.output)
 				card2 := g.Deal(g.output)
@@ -448,7 +478,11 @@ func (p *Player) SetAction(answer string) error {
 	var err error
 	switch p.Dialog {
 	case DialogBetOrQuit:
-		p.Action = ActionMap[strings.ToLower(answer)]
+		if answer == "" {
+			p.Action = ActionBet
+		} else {
+			p.Action = ActionMap[strings.ToLower(answer)]
+		}
 	case DialogPlaceYourBet:
 		var bet int
 		if answer == "" {
@@ -483,7 +517,7 @@ func IsInputValid(answer string, player *Player) (bool, error) {
 
 	switch player.Dialog {
 	case DialogBetOrQuit:
-		if strings.ToLower(answer) == "b" || strings.ToLower(answer) == "q" {
+		if strings.ToLower(answer) == "b" || strings.ToLower(answer) == "q" || answer == "" {
 			ok = true
 		}
 	case DialogPlaceYourBet:

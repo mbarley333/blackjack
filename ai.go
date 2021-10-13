@@ -81,3 +81,9 @@ func AiBet(g *Game) error {
 	}
 	return nil
 }
+
+func GetHint(output io.Writer, input io.Reader, player *Player, dealerCard cards.Card, index int, c CardCounter, stage Stage) Action {
+
+	answer := AiActionBasic(output, input, player, dealerCard, index, c, stage)
+	return answer
+}

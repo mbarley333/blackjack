@@ -164,13 +164,11 @@ func NewAiPlayer(output io.Writer, input io.Reader, index int) *Player {
 	defaultName := "AiPlayer" + strconv.Itoa(index+1)
 
 	reader := bufio.NewReader(input)
-	// answer, _ := reader.ReadString('\n')
-	// answer = strings.Replace(name, "\n", "", -1)
 
 	fmt.Fprintf(output, "%s enter your name [%s]: ", defaultName, defaultName)
 	name, _ = reader.ReadString('\n')
 	name = strings.Replace(name, "\n", "", -1)
-	//fmt.Fscanln(input, &name)
+
 	if name == "" {
 		name = defaultName
 	}

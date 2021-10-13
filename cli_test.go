@@ -2,9 +2,7 @@ package blackjack_test
 
 import (
 	"blackjack"
-	"bufio"
 	"bytes"
-	"fmt"
 	"strings"
 	"testing"
 
@@ -188,12 +186,12 @@ func TestNewAiPlayer(t *testing.T) {
 	t.Parallel()
 
 	output := &bytes.Buffer{}
-	input := strings.NewReader("aaa\nb\n10")
+	input := strings.NewReader("James Bond\nb\n10")
 
 	index := 0
 
 	want := &blackjack.Player{
-		Name:           "aaa",
+		Name:           "James Bond",
 		Cash:           100,
 		AiRoundsToPlay: 10,
 		Hands: []*blackjack.Hand{
@@ -226,32 +224,5 @@ func TestSpacesInNameHumanPlayer(t *testing.T) {
 	if want != got {
 		t.Fatalf("want: %q, got: %q", want, got)
 	}
-
-}
-
-func TestSpacesInNameAiPlayer(t *testing.T) {
-	t.Parallel()
-
-	//output := &bytes.Buffer{}
-	input := strings.NewReader("James Bond\nb\n10")
-
-	reader := bufio.NewReader(input)
-	name, _ := reader.ReadString('\n')
-	//reader.ReadString()
-	//name = strings.Replace(name, "\n", "", -1)
-
-	fmt.Println(name)
-
-	// index := 0
-
-	// ai := blackjack.NewAiPlayer(output, input, index)
-
-	// want := "James Bond"
-
-	// got := ai.Name
-
-	// if want != got {
-	// 	t.Fatalf("want: %q, got: %q", want, got)
-	// }
 
 }

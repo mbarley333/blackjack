@@ -1,11 +1,12 @@
 package blackjack
 
 import (
-	"cards"
 	"io"
+
+	"github.com/mbarley333/cards"
 )
 
-func AiActionBasic(output io.Writer, input io.Reader, player *Player, dealerCard cards.Card, index int, c CardCounter) Action {
+func AiActionBasic(output io.Writer, input io.Reader, player *Player, dealerCard cards.Card, index int, c CardCounter, stage Stage) Action {
 
 	var action Action
 	handValue := player.Hands[index].Score()
@@ -63,19 +64,19 @@ func AiActionBasic(output io.Writer, input io.Reader, player *Player, dealerCard
 
 }
 
-func AiActionStandOnly(output io.Writer, input io.Reader, player *Player, dealerCard cards.Card, index int, c CardCounter) Action {
+func AiActionStandOnly(output io.Writer, input io.Reader, player *Player, dealerCard cards.Card, index int, c CardCounter, stage Stage) Action {
 
 	return ActionStand
 }
 
-func AiBet(output io.Writer, input io.Reader, player *Player, index int, c CardCounter) error {
+func AiBet(g *Game) error {
 
-	if player.Record.HandsPlayed == player.AiHandsToPlay {
-		player.Action = ActionQuit
+	if g.ActivePlayer.Record.HandsPlayed == g.ActivePlayer.AiRoundsToPlay {
+		g.ActivePlayer.Action = ActionQuit
 	} else {
 		bet := 1
-		player.Cash -= bet
-		player.Hands[index].Bet += bet
+		g.ActivePlayer.Cash -= bet
+		g.ActivePlayer.Hands[g.ActivePlayer.HandIndex].Bet += bet
 
 	}
 	return nil

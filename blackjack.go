@@ -1,7 +1,6 @@
 package blackjack
 
 import (
-	"cards"
 	"fmt"
 	"io"
 	"math/rand"
@@ -9,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/mbarley333/cards"
 )
 
 type Action int
@@ -20,6 +21,7 @@ var ActionStringMap = map[Action]string{
 	ActionQuit:       "Quit",
 	ActionDoubleDown: "Double Down",
 	ActionSplit:      "Split",
+	ActionBet:        "Bet",
 }
 
 func (a Action) String() string {
@@ -33,6 +35,7 @@ const (
 	ActionQuit
 	ActionDoubleDown
 	ActionSplit
+	ActionBet
 )
 
 var ActionMap = map[string]Action{
@@ -42,6 +45,7 @@ var ActionMap = map[string]Action{
 	"n": None,
 	"d": ActionDoubleDown,
 	"p": ActionSplit,
+	"b": ActionBet,
 }
 
 type Outcome int
@@ -93,7 +97,7 @@ const (
 	PlayerTypeAiCustom
 )
 
-var PlayerTypeMap = map[PlayerType]func(io.Writer, io.Reader, *Player, cards.Card, int, CardCounter) Action{
+var PlayerTypeMap = map[PlayerType]func(io.Writer, io.Reader, *Player, cards.Card, int, CardCounter, Stage) Action{
 	PlayerTypeHuman:       HumanAction,
 	PlayerTypeAiStandOnly: AiActionStandOnly,
 	PlayerTypeAiBasic:     AiActionBasic,
@@ -107,18 +111,87 @@ var PlayerTypeInputMap = map[string]PlayerType{
 	"x": PlayerTypeAiBasic,
 }
 
-var PlayerTypeBetMap = map[PlayerType]func(io.Writer, io.Reader, *Player, int, CardCounter) error{
+var PlayerTypeBetMap = map[PlayerType]func(*Game) error{
 	PlayerTypeHuman:       HumanBet,
 	PlayerTypeAiStandOnly: AiBet,
 	PlayerTypeAiBasic:     AiBet,
 	PlayerTypeAiCustom:    AiBet,
 }
 
+type Stage int
+
+const (
+	StageStart Stage = iota
+	StageOpeningDeal
+	StageBetting
+	StageDeciding
+	StageDealerPlay
+	StageOutcome
+)
+
+var StageMap = map[Stage]string{
+	StageStart:       "Start",
+	StageOpeningDeal: "Opening Deal",
+	StageBetting:     "Betting",
+	StageDeciding:    "Deciding",
+	StageDealerPlay:  "Dealer Play",
+	StageOutcome:     "Outcome",
+}
+
+var StageDisplayMessageMap = map[Stage]string{
+	StageStart:       "LET'S PLAY BLACKJACK!",
+	StageOpeningDeal: "OPENING DEAL",
+	StageBetting:     "PLACE YOUR BETS!",
+	StageDeciding:    "PLAYERS MAKE YOUR CHOICE",
+	StageDealerPlay:  "DEALER PLAY",
+	StageOutcome:     "OUTCOME",
+}
+
+func (s Stage) String() string {
+	return StageMap[s]
+}
+
+func (s Stage) Message() string {
+	return StageDisplayMessageMap[s]
+}
+
+type Dialog int
+
+const (
+	DialogNone Dialog = iota
+	DialogBetOrQuit
+	DialogPlaceYourBet
+	DialogHitOrStand
+	DialogHitSplitDoubleStand
+	DialogHitDoubleStand
+)
+
+var DialogMap = map[Dialog]string{
+	DialogNone:                "Invalid Dialog",
+	DialogBetOrQuit:           "BetOrQuit",
+	DialogPlaceYourBet:        "PlaceYourBet",
+	DialogHitOrStand:          "HitOrStand",
+	DialogHitSplitDoubleStand: "HitSplitDoubleStand",
+	DialogHitDoubleStand:      "HitDoubleStand",
+}
+
+var DialogPlayerMessage = map[Dialog]string{
+	DialogNone:                "Invalid Dialog",
+	DialogBetOrQuit:           "enter (B)et or (Q)uit [b]:",
+	DialogPlaceYourBet:        "place your bet",
+	DialogHitOrStand:          "please choose (H)it or (S)tand: ",
+	DialogHitSplitDoubleStand: "please choose (H)it, S(P)lit, (D)ouble or (S)tand: ",
+	DialogHitDoubleStand:      "please choose (H)it, (D)ouble or (S)tand: ",
+}
+
+func (d Dialog) String() string {
+	return DialogMap[d]
+}
+
 type Game struct {
 	Players              []*Player
 	Dealer               *Player
 	Shoe                 cards.Deck
-	Random               rand.Rand
 	output               io.Writer
 	input                io.Reader
 	IsIncomingDeck       bool
@@ -128,6 +201,11 @@ type Game struct {
 	random               *rand.Rand
 	CountCards           func(cards.Card, int, int, int) (int, float64)
 	CardCounter          CardCounter
+	Stage                Stage
+	StageMessage         string
+	NumberHumanPlayers   int
+	NumberAiPlayers      int
+	ActivePlayer         *Player
 }
 
 type Option func(*Game) error
@@ -175,15 +253,32 @@ func WithRandom(random *rand.Rand) Option {
 	}
 }
 
+func WithNumberOfHumanPlayers(human int) Option {
+	return func(g *Game) error {
+		g.NumberHumanPlayers = human
+
+		return nil
+	}
+}
+
+func WithNumberOfAiPlayers(ai int) Option {
+	return func(g *Game) error {
+		g.NumberAiPlayers = ai
+		return nil
+	}
+}
+
 func NewBlackjackGame(opts ...Option) (*Game, error) {
 
 	game := &Game{
-		output:         os.Stdout,
-		input:          os.Stdin,
-		IsIncomingDeck: true,
-		DeckCount:      6,
-		random:         rand.New(rand.NewSource(time.Now().UnixNano())),
-		CountCards:     CountHiLo,
+		output:             os.Stdout,
+		input:              os.Stdin,
+		IsIncomingDeck:     true,
+		DeckCount:          6,
+		random:             rand.New(rand.NewSource(time.Now().UnixNano())),
+		CountCards:         CountHiLo,
+		NumberHumanPlayers: 1,
+		NumberAiPlayers:    0,
 	}
 
 	deck := cards.NewDeck(
@@ -210,6 +305,7 @@ func NewBlackjackGame(opts ...Option) (*Game, error) {
 	}
 
 	game.Dealer = &Player{
+		Name: "Dealer",
 		Hands: []*Hand{
 			{
 				Id: 1,
@@ -220,152 +316,17 @@ func NewBlackjackGame(opts ...Option) (*Game, error) {
 	return game, nil
 }
 
-func RunCLI() {
-
-	g, err := NewBlackjackGame()
-	if err != nil {
-		fmt.Println(fmt.Errorf("cannot create new blackjack game, %s", err))
-	}
-
-	g.PlayerSetup(g.output, g.input)
-
-	for g.PlayAgain() {
-
-		g.ResetPlayers()
-		g.Betting()
-		g.Players = g.RemoveQuitPlayers()
-		if len(g.Players) == 0 {
-			break
-		}
-		g.Start()
-	}
-
-	fmt.Fprintln(g.output, "No players left in game.  Exiting...")
-}
-
-func (g *Game) AddPlayer(player *Player) {
-	g.Players = append(g.Players, player)
-}
-
-func (g *Game) PlayerSetup(output io.Writer, input io.Reader) error {
-
-	var answer int
-
-	for answer < 1 {
-		fmt.Fprintln(output, "Please enter number of Blackjack players:")
-		fmt.Fscanln(input, &answer)
-	}
-
-	for i := 1; i <= answer; i++ {
-
-		player, err := NewPlayer(output, input)
-		if err != nil {
-			return fmt.Errorf("unable to setup players, %s", err)
-		}
-
-		g.AddPlayer(&player)
-	}
-
-	return nil
-}
-
 func (g *Game) PlayAgain() bool {
-
-	for _, player := range g.Players {
-		if player.Action != ActionQuit {
-			return true
-		}
+	response := false
+	if len(g.Players) > 0 {
+		response = true
 	}
-	return false
+
+	return response
 }
 
-func (g *Game) Betting() error {
-
-	var err error
-	index := 0
-	for _, player := range g.Players {
-
-		err = player.Bet(g.output, g.input, player, index, g.CardCounter)
-		if err != nil {
-			return fmt.Errorf("unable to place bet for player: %s", player.Name)
-		}
-
-	}
-	return nil
-
-}
-
-func (g *Game) Start() {
-
-	fmt.Fprintln(g.output, "")
-	fmt.Fprintln(g.output, "****** NEW GAME ******")
-
-	g.OpeningDeal()
-
-	fmt.Fprintln(g.output, g.Dealer.DealerString())
-	g.ShowPlayerCards(g.output)
-
-	for _, player := range g.Players {
-		g.PlayHand(player)
-	}
-
-	fmt.Fprintln(g.output, "")
-	g.DealerPlay()
-
-	fmt.Fprintln(g.output, "Dealer"+g.Dealer.PlayerString())
-	g.ShowPlayerCards(g.output)
-
-	fmt.Fprintln(g.output, "")
-
-	g.Outcome(g.output)
-
-}
-
-func (g *Game) PlayHand(player *Player) {
-	for index, hand := range player.Hands {
-		if hand.Score() == 21 {
-			hand.Outcome = OutcomeBlackjack
-		}
-
-		for hand.ChooseAction() {
-			if hand.Action == None {
-
-				fmt.Fprintln(g.output, hand.HandString(player.Name))
-				hand.Action = player.Decide(g.output, g.input, player, g.Dealer.Hands[0].Cards[0], index, g.CardCounter)
-			}
-
-			if hand.Action == ActionHit {
-				card := g.Deal(g.output)
-				hand.Hit(g.output, card, player.Name)
-			} else if hand.Action == ActionDoubleDown {
-				player.Cash -= hand.Bet
-				card := g.Deal(g.output)
-				hand.DoubleDown(g.output, card, player.Name)
-			} else if hand.Action == ActionSplit {
-				card1 := g.Deal(g.output)
-				card2 := g.Deal(g.output)
-				player.Split(g.output, card1, card2, index)
-				g.PlayHand(player)
-
-			}
-		}
-	}
-
-}
-
-func (g *Game) DealerPlay() {
-
-	dealerOk := g.IsDealerDraw()
-
-	if dealerOk {
-		fmt.Fprintln(g.output, "****** DEALER'S TURN ******")
-
-		for g.Dealer.Hands[0].Score() <= 16 || (g.Dealer.Hands[0].Score() == 17 && g.Dealer.Hands[0].MinScore() != 17) {
-			card := g.Deal(g.output)
-			g.Dealer.Hands[0].Cards = append(g.Dealer.Hands[0].Cards, card)
-		}
-		g.Dealer.Hands[0].Action = ActionStand
-	}
+func (g *Game) SetActivePlayer(player *Player) {
+	g.ActivePlayer = player
 }
 
 func (g Game) IsDealerDraw() bool {
@@ -407,9 +368,9 @@ func (g *Game) Deal(output io.Writer) cards.Card {
 
 	if g.IsIncomingDeck {
 		if g.CardsDealt >= g.IncomingDeckPosition {
-			fmt.Fprintln(output, "\n******************************")
-			fmt.Fprintln(output, "***** New Deck Incoming ******")
-			fmt.Fprintln(output, "\n******************************")
+			g.StageMessage = "NEW DECK INCOMING"
+			RenderStageMessage(g.output, g.StageMessage)
+
 			g.Shoe = g.IncomingDeck()
 			g.ResetFieldsAfterIncomingDeck()
 		}
@@ -426,50 +387,6 @@ func (g *Game) ResetFieldsAfterIncomingDeck() {
 	g.CardCounter.TrueCount = 0
 }
 
-func (g *Game) OpeningDeal() {
-	for i := 0; i < 2; i++ {
-		for _, player := range g.Players {
-			card := g.Deal(g.output)
-			player.Hands[player.HandIndex].Cards = append(player.Hands[player.HandIndex].Cards, card)
-		}
-		card := g.Deal(g.output)
-		g.Dealer.Hands[g.Dealer.HandIndex].Cards = append(g.Dealer.Hands[g.Dealer.HandIndex].Cards, card)
-	}
-}
-
-func (g *Game) Outcome(output io.Writer) {
-
-	var outcome Outcome
-	for _, player := range g.Players {
-		for _, hand := range player.Hands {
-			if hand.Outcome == OutcomeBlackjack || hand.Outcome == OutcomeBust {
-				outcome = hand.Outcome
-			} else if g.Dealer.Hands[0].Score() > 21 {
-				outcome = OutcomeWin
-			} else if hand.Score() > g.Dealer.Hands[0].Score() {
-				outcome = OutcomeWin
-			} else if hand.Score() < g.Dealer.Hands[0].Score() {
-				outcome = OutcomeLose
-			} else if hand.Score() == g.Dealer.Hands[0].Score() {
-				outcome = OutcomeTie
-			}
-
-			hand.Outcome = outcome
-
-		}
-
-		player.SetWinLoseTie()
-
-		player.Payout()
-
-		player.Broke()
-
-		player.OutcomeReport(output)
-	}
-
-	g.RemoveQuitPlayers()
-}
-
 func (g *Game) ResetPlayers() {
 
 	for _, player := range g.Players {
@@ -478,16 +395,19 @@ func (g *Game) ResetPlayers() {
 		hand := NewHand(1)
 		player.AddHand(hand)
 		player.Action = None
+		player.Message = ""
 
 	}
 	g.Dealer.Hands = []*Hand{}
 	hand := NewHand(1)
 	g.Dealer.AddHand(hand)
+	g.Dealer.Message = ""
 
 }
 
 func (g *Game) RemoveQuitPlayers() []*Player {
 	newPlayers := []*Player{}
+
 	if len(g.Players) > 0 {
 		for _, player := range g.Players {
 			if player.Action != ActionQuit {
@@ -508,16 +428,28 @@ func (g Game) IncomingDeck() cards.Deck {
 
 }
 
+func (g *Game) SetStage(stage Stage) {
+	g.Stage = stage
+	g.StageMessage = StageDisplayMessageMap[stage]
+}
+
+func (g *Game) AddPlayer(player *Player) {
+	g.Players = append(g.Players, player)
+}
+
 type Player struct {
-	Name          string
-	Action        Action
-	Bet           func(io.Writer, io.Reader, *Player, int, CardCounter) error
-	Decide        func(io.Writer, io.Reader, *Player, cards.Card, int, CardCounter) Action
-	AiHandsToPlay int
-	Record        Record
-	Cash          int
-	Hands         []*Hand
-	HandIndex     int
+	Name           string
+	Action         Action
+	Bet            func(*Game) error
+	Decide         func(io.Writer, io.Reader, *Player, cards.Card, int, CardCounter, Stage) Action
+	AiRoundsToPlay int
+	Record         Record
+	Cash           int
+	Hands          []*Hand
+	HandIndex      int
+	Message        string
+	Dialog         Dialog
+	CurrentBet     int
 }
 
 func (p *Player) Payout() {
@@ -575,8 +507,11 @@ func (p *Player) Split(output io.Writer, card1, card2 cards.Card, index int) {
 
 	p.Hands[indexNewHand].Action = None
 
-	fmt.Fprintln(output, p.Hands[index].HandString(p.Name))
-	fmt.Fprintln(output, p.Hands[indexNewHand].HandString(p.Name))
+	p.Message = p.Hands[index].HandStringMulti(p.Name)
+	RenderPlayerMessage(output, p)
+
+	p.Message = p.Hands[indexNewHand].HandStringMulti(p.Name)
+	RenderPlayerMessage(output, p)
 
 }
 
@@ -654,54 +589,25 @@ func (p Player) PlayerString() string {
 	return response
 }
 
-func NewPlayer(output io.Writer, input io.Reader) (Player, error) {
-	var name string
-	var playerTypeInput string
-	var aiHandsInput string
+func (p Player) NextHandId() int {
+	return len(p.Hands) + 1
+}
 
-	fmt.Fprintln(output, "Enter your name: ")
-	fmt.Fscanln(input, &name)
+func (p *Player) SetDialog(dialog Dialog) error {
 
-	for strings.ToLower(playerTypeInput) != "h" && strings.ToLower(playerTypeInput) != "a" {
-		fmt.Fprintln(output, "Select (H)uman or (A)i")
-		fmt.Fscanln(input, &playerTypeInput)
+	switch dialog {
+	case DialogBetOrQuit:
+		str := []string{p.Name, " has $", strconv.Itoa(p.Cash), " ", DialogPlayerMessage[dialog], " "}
+		p.Message = strings.Join(str, "")
+	case DialogPlaceYourBet:
+		str := []string{p.Name, " has $", strconv.Itoa(p.Cash), " ", DialogPlayerMessage[dialog], " ($1 to $", strconv.Itoa(p.Cash), " [$", strconv.Itoa(p.CurrentBet), "]): $"}
+		p.Message = strings.Join(str, "")
+
+	default:
+		return fmt.Errorf("missing Dialog value switch, %v", dialog.String())
 	}
-
-	if strings.ToLower(playerTypeInput) == "a" {
-		for strings.ToLower(playerTypeInput) != "b" && strings.ToLower(playerTypeInput) != "x" {
-			fmt.Fprintln(output, "Select AI Type: (B)asic, (S)tandOnly or (X)custom")
-			fmt.Fscanln(input, &playerTypeInput)
-		}
-	}
-
-	playerTypeInputValue := PlayerTypeInputMap[strings.ToLower(playerTypeInput)]
-	playerType := PlayerTypeMap[playerTypeInputValue]
-	playerTypeBet := PlayerTypeBetMap[playerTypeInputValue]
-
-	aiHands := 0
-	var err error
-	if strings.ToLower(playerTypeInput) != "h" {
-		fmt.Fprintln(output, "Enter number of hands the AI plays: ")
-		fmt.Fscanln(input, &aiHandsInput)
-		aiHands, err = strconv.Atoi(aiHandsInput)
-		if err != nil {
-			return Player{}, fmt.Errorf("unable to create new player,%s", err)
-		}
-	}
-
-	player := Player{
-
-		Name:          name,
-		Decide:        playerType,
-		AiHandsToPlay: aiHands,
-		Bet:           playerTypeBet,
-		Cash:          100,
-		Hands: []*Hand{
-			{Id: 1},
-		},
-	}
-
-	return player, nil
+	p.Dialog = dialog
+	return nil
 }
 
 type Hand struct {
@@ -733,15 +639,11 @@ func (h *Hand) DoubleDown(output io.Writer, card cards.Card, name string) {
 
 }
 
-func (p Player) NextHandId() int {
-	return len(p.Hands) + 1
-}
-
 func (h Hand) ChooseAction() bool {
 	return h.Action != ActionQuit && h.Action != ActionStand && h.Outcome != OutcomeBlackjack && h.Outcome != OutcomeBust
 }
 
-func (h Hand) HandString(name string) string {
+func (h Hand) HandStringMulti(name string) string {
 
 	builder := strings.Builder{}
 	var response string
@@ -756,6 +658,36 @@ func (h Hand) HandString(name string) string {
 		str := []string{name, " hand #", strconv.Itoa(h.Id), " has ", fmt.Sprint(h.Score()), ": ", builder.String(), "\n"}
 		response = strings.Join(str, "")
 	}
+
+	return response
+}
+
+func (h Hand) HandString(name string) string {
+
+	builder := strings.Builder{}
+	var response string
+
+	if h.Action == ActionDoubleDown {
+		builder.WriteString(name + " has ???: " + "[" + h.Cards[0].String() + "]" + "[" + h.Cards[1].String() + "]" + "[???]\n")
+		response += builder.String()
+	} else {
+		for _, card := range h.Cards {
+			builder.WriteString("[" + card.String() + "]")
+		}
+		str := []string{name, " has ", fmt.Sprint(h.Score()), ": ", builder.String(), "\n"}
+		response = strings.Join(str, "")
+	}
+
+	return response
+}
+
+func (h Hand) DealerHandString() string {
+
+	builder := strings.Builder{}
+	var response string
+
+	builder.WriteString("Dealer has: " + "[???][" + h.Cards[1].String() + "]" + "\n")
+	response += builder.String()
 
 	return response
 }
@@ -845,71 +777,47 @@ func ScoreDealerHoleCard(card cards.Card) int {
 	return score
 }
 
-func HumanAction(output io.Writer, input io.Reader, player *Player, dealerCard cards.Card, index int, c CardCounter) Action {
-
-	var answer string
+func HumanAction(output io.Writer, input io.Reader, player *Player, dealerCard cards.Card, index int, c CardCounter, stage Stage) Action {
 
 	// check to see if not enough to split or double
-	if player.Hands[index].Bet > player.Cash {
-		for strings.ToLower(answer) != "h" && strings.ToLower(answer) != "s" {
-			fmt.Fprintln(output, "Please choose (H)it or (S)tand")
-			fmt.Fscanln(input, &answer)
-			if strings.ToLower(answer) == "c" {
-				fmt.Fprintln(output, c.String())
-			}
-		}
+	if player.Hands[index].Bet > player.Cash || len(player.Hands[index].Cards) > 2 {
+
+		player.Dialog = DialogHitOrStand
+
 	} else {
 		// check if split is ok
 		if player.Hands[index].Cards[0].Rank == player.Hands[index].Cards[1].Rank {
-			for strings.ToLower(answer) != "h" && strings.ToLower(answer) != "p" && strings.ToLower(answer) != "d" && strings.ToLower(answer) != "s" {
-				fmt.Fprintln(output, "Please choose (H)it, S(P)lit, (D)ouble or (S)tand")
-				fmt.Fscanln(input, &answer)
-				if strings.ToLower(answer) == "c" {
-					fmt.Fprintln(output, c.String())
-				}
-			}
+			player.Dialog = DialogHitSplitDoubleStand
+
 		} else {
 			// double ok
-			for strings.ToLower(answer) != "h" && strings.ToLower(answer) != "d" && strings.ToLower(answer) != "s" {
-				fmt.Fprintln(output, "Please choose (H)it, (D)ouble or (S)tand")
-				fmt.Fscanln(input, &answer)
-				if strings.ToLower(answer) == "c" {
-					fmt.Fprintln(output, c.String())
-				}
-			}
+			player.Dialog = DialogHitDoubleStand
+
 		}
 	}
+	str := []string{
+		player.Name,
+		" ",
+		DialogPlayerMessage[player.Dialog],
+	}
+	player.Message = strings.Join(str, "")
+	RenderPlayerMessage(output, player)
+	RenderPlayerInput(output, input, player, stage, c)
 
-	return ActionMap[strings.ToLower(answer)]
+	return player.Action
 }
 
-func HumanBet(output io.Writer, input io.Reader, player *Player, index int, c CardCounter) error {
+func HumanBet(g *Game) error {
 
-	var answer string
-	var bet int = 0
+	g.ActivePlayer.SetDialog(DialogBetOrQuit)
 
-	fmt.Fprintln(output, "")
-	fmt.Fprintln(output, "****** BET or QUIT ******")
+	RenderPlayerMessage(g.output, g.ActivePlayer)
+	RenderPlayerInput(g.output, g.input, g.ActivePlayer, g.Stage, g.CardCounter)
 
-	for strings.ToLower(answer) != "b" && strings.ToLower(answer) != "q" {
-		fmt.Fprintln(output, "Enter (b)et or (q)uit")
-		fmt.Fscanln(input, &answer)
-		if strings.ToLower(answer) == "c" {
-			fmt.Fprintln(output, c.String())
-		}
-	}
-
-	switch strings.ToLower(answer) {
-	case "q":
-		player.Action = ActionQuit
-	case "b":
-		for bet < 1 || bet > player.Cash {
-			fmt.Fprintf(output, "Enter bet amount between 1 and %d: ", player.Cash)
-			fmt.Fscanln(input, &bet)
-		}
-		player.Cash -= bet
-		player.Hands[player.HandIndex].Bet += bet
-
+	if g.ActivePlayer.Action != ActionQuit {
+		g.ActivePlayer.SetDialog(DialogPlaceYourBet)
+		RenderPlayerMessage(g.output, g.ActivePlayer)
+		RenderPlayerInput(g.output, g.input, g.ActivePlayer, g.Stage, g.CardCounter)
 	}
 
 	return nil

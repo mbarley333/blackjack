@@ -1,7 +1,7 @@
 package blackjack
 
 import (
-	"cards"
+	"github.com/mbarley333/cards"
 )
 
 func CountHiLo(card cards.Card, count int, numberCardsDealt int, deckCount int) (int, float64) {

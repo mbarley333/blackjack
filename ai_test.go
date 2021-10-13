@@ -1,11 +1,12 @@
 package blackjack_test
 
 import (
+	"blackjack"
 	"bytes"
-	"cards"
-	"cards/blackjack"
 	"strings"
 	"testing"
+
+	"github.com/mbarley333/cards"
 )
 
 func TestAiBasicAction(t *testing.T) {
@@ -181,7 +182,7 @@ func TestAiBasicAction(t *testing.T) {
 		want := tc.action
 
 		index := 0
-		got := g.Players[0].Decide(output, input, g.Players[0], g.Dealer.Hands[0].Cards[0], index, g.CardCounter)
+		got := g.Players[0].Decide(output, input, g.Players[0], g.Dealer.Hands[0].Cards[0], index, g.CardCounter, g.Stage)
 
 		if want != got {
 			t.Fatalf("%q: wanted: %q, got: %q", tc.description, want.String(), got.String())

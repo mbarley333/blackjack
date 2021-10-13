@@ -15,13 +15,13 @@ func RunCLI() {
 
 	flag.Usage = help
 
-	humanPlayerPtr := flag.Int("humanPlayers", 1, "Number of human players.  Default is 1")
-	aiPlayerPtr := flag.Int("aiPlayers", 0, "Number of AI players.  Default is 0")
+	humanPlayersPtr := flag.Int("humanPlayers", 1, "Number of human players.  Default is 1")
+	aiPlayersPtr := flag.Int("aiPlayers", 0, "Number of AI players.  Default is 0")
 	deckCountPtr := flag.Int("deckCount", 6, "Number of decks in shoe.  Default is 6")
 
 	flag.Parse()
 
-	g, err := NewBlackjackGameWithArgs(*humanPlayerPtr, *aiPlayerPtr, *deckCountPtr)
+	g, err := NewBlackjackGameWithArgs(*humanPlayersPtr, *aiPlayersPtr, *deckCountPtr)
 	if err != nil {
 		fmt.Println(fmt.Errorf("cannot create new blackjack game, %s", err))
 	}
@@ -142,41 +142,6 @@ func NewHumanPlayer(output io.Writer, input io.Reader, index int) *Player {
 		Bet:        HumanBet,
 		CurrentBet: 1,
 		Cash:       100,
-		Hands: []*Hand{
-			{Id: 1},
-		},
-	}
-
-	return player
-
-}
-
-func NewAi(output io.Writer, input io.Reader, index int) *Player {
-	var name string
-	var playerTypeInput string
-
-	defaultName := "AiPlayer" + strconv.Itoa(index+1)
-
-	fmt.Fprintf(output, "%s enter your name [%s]: ", defaultName, defaultName)
-	fmt.Fscanln(input, &name)
-	if name == "" {
-		name = defaultName
-	}
-
-	for strings.ToLower(playerTypeInput) != "b" && strings.ToLower(playerTypeInput) != "s" && strings.ToLower(playerTypeInput) != "x" {
-		fmt.Fprintf(output, "Select AI Type (B)asic Strategy, (S)tandOnly or (X)custom [B]: ")
-		fmt.Fscanln(input, &playerTypeInput)
-		if playerTypeInput == "" {
-			playerTypeInput = "b"
-		}
-
-	}
-
-	player := &Player{
-
-		Name: name,
-
-		Cash: 100,
 		Hands: []*Hand{
 			{Id: 1},
 		},

@@ -179,9 +179,9 @@ var DialogPlayerMessage = map[Dialog]string{
 	DialogNone:                "Invalid Dialog",
 	DialogBetOrQuit:           "enter (B)et or (Q)uit [b]:",
 	DialogPlaceYourBet:        "place your bet",
-	DialogHitOrStand:          "please choose (H)it or (S)tand: ",
-	DialogHitSplitDoubleStand: "please choose (H)it, S(P)lit, (D)ouble or (S)tand: ",
-	DialogHitDoubleStand:      "please choose (H)it, (D)ouble or (S)tand: ",
+	DialogHitOrStand:          "please choose (H)it, (S)tand or (?)Hint: ",
+	DialogHitSplitDoubleStand: "please choose (H)it, S(P)lit, (D)ouble, (S)tand or (?)Hint: ",
+	DialogHitDoubleStand:      "please choose (H)it, (D)ouble, (S)tand (?)Hint: ",
 }
 
 func (d Dialog) String() string {
@@ -802,7 +802,7 @@ func HumanAction(output io.Writer, input io.Reader, player *Player, dealerCard c
 	}
 	player.Message = strings.Join(str, "")
 	RenderPlayerMessage(output, player)
-	RenderPlayerInput(output, input, player, stage, c)
+	RenderPlayerInput(output, input, player, stage, c, dealerCard)
 
 	return player.Action
 }
@@ -811,13 +811,16 @@ func HumanBet(g *Game) error {
 
 	g.ActivePlayer.SetDialog(DialogBetOrQuit)
 
+	// hack
+	card := cards.Card{}
+
 	RenderPlayerMessage(g.output, g.ActivePlayer)
-	RenderPlayerInput(g.output, g.input, g.ActivePlayer, g.Stage, g.CardCounter)
+	RenderPlayerInput(g.output, g.input, g.ActivePlayer, g.Stage, g.CardCounter, card)
 
 	if g.ActivePlayer.Action != ActionQuit {
 		g.ActivePlayer.SetDialog(DialogPlaceYourBet)
 		RenderPlayerMessage(g.output, g.ActivePlayer)
-		RenderPlayerInput(g.output, g.input, g.ActivePlayer, g.Stage, g.CardCounter)
+		RenderPlayerInput(g.output, g.input, g.ActivePlayer, g.Stage, g.CardCounter, card)
 	}
 
 	return nil

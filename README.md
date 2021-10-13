@@ -29,13 +29,25 @@ Thank you to @bitfield for all of his mentoring on my Go journey!
 
 # Getting started
 ```bash
-./blackjack
+./blackjack -help
+
+        Parameters:
+          humanPlayers     Number of human players.  Default is 1
+          aiPlayers        Number of Ai players.  Default is 0
+          deckCount        Number of decks in shoe.  Default is 6
+
+        Usage:
+        ./blackjack -humanPlayers 1 -aiPlayers 1 -deckCount 7
 ```
 * Enter number of players
 * Enter name of player
 * Select either AI or Human player
 * For AI, enter number of hands to play
 * From any command line, as a human player, enter "c" to get the card count and the true count
+* In game hint available when "?" is displayed from command line
+```bash
+	Player1 please choose (H)it, (D)ouble, (S)tand (?)Hint: 
+```
 
 
 # Adding a custom AI

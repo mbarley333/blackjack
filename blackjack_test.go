@@ -583,3 +583,45 @@ func TestSplit(t *testing.T) {
 	}
 
 }
+
+func TestGetHint(t *testing.T) {
+	t.Parallel()
+
+	// enter a character at the decision point: ?
+	// get a action string
+
+	output := &bytes.Buffer{}
+	input := strings.NewReader("")
+
+	p := &blackjack.Player{
+		Hands: []*blackjack.Hand{
+			{
+				Id: 1,
+				Cards: []cards.Card{
+					{Rank: cards.Six, Suit: cards.Heart},
+					{Rank: cards.Nine, Suit: cards.Spade},
+				},
+				Bet:    1,
+				Action: blackjack.None,
+			},
+		},
+	}
+
+	dealerCard := cards.Card{Rank: cards.Ten, Suit: cards.Heart}
+
+	index := 0
+
+	counter := blackjack.CardCounter{}
+
+	stage := blackjack.StageDeciding
+
+	action := blackjack.GetHint(output, input, p, dealerCard, index, counter, stage)
+
+	want := blackjack.ActionHit.String()
+	got := action.String()
+
+	if want != got {
+		t.Fatalf("want: %q, got: %q", want, got)
+	}
+
+}

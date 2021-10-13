@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/mbarley333/cards"
 )
 
 func RunCLI() {
@@ -385,7 +387,7 @@ func RenderPlayerMessage(output io.Writer, player *Player) {
 
 }
 
-func RenderPlayerInput(output io.Writer, input io.Reader, player *Player, stage Stage, c CardCounter) error {
+func RenderPlayerInput(output io.Writer, input io.Reader, player *Player, stage Stage, c CardCounter, dealerCard cards.Card) error {
 
 	ok := false
 	var err error
@@ -399,6 +401,13 @@ func RenderPlayerInput(output io.Writer, input io.Reader, player *Player, stage 
 		// show count
 		if answer == "c" {
 			fmt.Fprintln(output, c.String())
+		}
+
+		if answer == "?" && stage == StageDeciding {
+			index := 0
+			action := GetHint(output, input, player, dealerCard, index, c, stage)
+			hint := "The suggested action is to " + action.String() + "\n"
+			fmt.Fprintln(output, hint)
 		}
 
 		ok, err = IsInputValid(answer, player)
@@ -533,6 +542,6 @@ func help() {
 	  deckCount        Number of decks in shoe.  Default is 6
 	
 	Usage:
-	./blackjack -humanPlayers 1 -aiPlayers 1 deckCount 7
+	./blackjack -humanPlayers 1 -aiPlayers 1 -deckCount 7
 	`)
 }

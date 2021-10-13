@@ -186,12 +186,12 @@ func TestNewAiPlayer(t *testing.T) {
 	t.Parallel()
 
 	output := &bytes.Buffer{}
-	input := strings.NewReader("aaa\nb\n10")
+	input := strings.NewReader("James Bond\nb\n10")
 
 	index := 0
 
 	want := &blackjack.Player{
-		Name:           "aaa",
+		Name:           "James Bond",
 		Cash:           100,
 		AiRoundsToPlay: 10,
 		Hands: []*blackjack.Hand{
@@ -203,6 +203,26 @@ func TestNewAiPlayer(t *testing.T) {
 
 	if !cmp.Equal(want, got, cmpopts.IgnoreFields(blackjack.Player{}, "Bet", "Decide")) {
 		t.Error(cmp.Diff(want, got))
+	}
+
+}
+
+func TestSpacesInNameHumanPlayer(t *testing.T) {
+	t.Parallel()
+
+	output := &bytes.Buffer{}
+	input := strings.NewReader("James Bond")
+
+	index := 0
+
+	human := blackjack.NewHumanPlayer(output, input, index)
+
+	want := "James Bond"
+
+	got := human.Name
+
+	if want != got {
+		t.Fatalf("want: %q, got: %q", want, got)
 	}
 
 }

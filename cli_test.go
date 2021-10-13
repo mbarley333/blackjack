@@ -2,7 +2,9 @@ package blackjack_test
 
 import (
 	"blackjack"
+	"bufio"
 	"bytes"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -204,5 +206,52 @@ func TestNewAiPlayer(t *testing.T) {
 	if !cmp.Equal(want, got, cmpopts.IgnoreFields(blackjack.Player{}, "Bet", "Decide")) {
 		t.Error(cmp.Diff(want, got))
 	}
+
+}
+
+func TestSpacesInNameHumanPlayer(t *testing.T) {
+	t.Parallel()
+
+	output := &bytes.Buffer{}
+	input := strings.NewReader("James Bond")
+
+	index := 0
+
+	human := blackjack.NewHumanPlayer(output, input, index)
+
+	want := "James Bond"
+
+	got := human.Name
+
+	if want != got {
+		t.Fatalf("want: %q, got: %q", want, got)
+	}
+
+}
+
+func TestSpacesInNameAiPlayer(t *testing.T) {
+	t.Parallel()
+
+	//output := &bytes.Buffer{}
+	input := strings.NewReader("James Bond\nb\n10")
+
+	reader := bufio.NewReader(input)
+	name, _ := reader.ReadString('\n')
+	//reader.ReadString()
+	//name = strings.Replace(name, "\n", "", -1)
+
+	fmt.Println(name)
+
+	// index := 0
+
+	// ai := blackjack.NewAiPlayer(output, input, index)
+
+	// want := "James Bond"
+
+	// got := ai.Name
+
+	// if want != got {
+	// 	t.Fatalf("want: %q, got: %q", want, got)
+	// }
 
 }

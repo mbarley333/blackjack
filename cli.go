@@ -127,12 +127,15 @@ func (g *Game) OpeningDeal() {
 }
 
 func NewHumanPlayer(output io.Writer, input io.Reader, index int) *Player {
-	var name string
 
 	defaultName := "Player" + strconv.Itoa(index+1)
 
 	fmt.Fprintf(output, "%s enter your name [%s]: ", defaultName, defaultName)
-	fmt.Fscanln(input, &name)
+
+	reader := bufio.NewReader(input)
+	name, _ := reader.ReadString('\n')
+	name = strings.Replace(name, "\n", "", -1)
+
 	if len(name) == 0 {
 		name = defaultName
 	}
@@ -160,15 +163,23 @@ func NewAiPlayer(output io.Writer, input io.Reader, index int) *Player {
 
 	defaultName := "AiPlayer" + strconv.Itoa(index+1)
 
+	reader := bufio.NewReader(input)
+	// answer, _ := reader.ReadString('\n')
+	// answer = strings.Replace(name, "\n", "", -1)
+
 	fmt.Fprintf(output, "%s enter your name [%s]: ", defaultName, defaultName)
-	fmt.Fscanln(input, &name)
+	name, _ = reader.ReadString('\n')
+	name = strings.Replace(name, "\n", "", -1)
+	//fmt.Fscanln(input, &name)
 	if name == "" {
 		name = defaultName
 	}
 
 	for strings.ToLower(playerTypeInput) != "b" && strings.ToLower(playerTypeInput) != "s" && strings.ToLower(playerTypeInput) != "x" {
 		fmt.Fprintf(output, "Select AI Type (B)asic Strategy, (S)tandOnly or (X)custom [B]: ")
-		fmt.Fscanln(input, &playerTypeInput)
+		//fmt.Fscanln(input, &playerTypeInput)
+		playerTypeInput, _ = reader.ReadString('\n')
+		playerTypeInput = strings.Replace(playerTypeInput, "\n", "", -1)
 		if playerTypeInput == "" {
 			playerTypeInput = "b"
 		}
@@ -183,7 +194,9 @@ func NewAiPlayer(output io.Writer, input io.Reader, index int) *Player {
 	var err error
 
 	fmt.Fprint(output, "Enter number of rounds the AI plays: ")
-	fmt.Fscan(input, &aiRoundsToPlay)
+	//fmt.Fscan(input, &aiRoundsToPlay)
+	aiRoundsToPlay, _ = reader.ReadString('\n')
+	aiRoundsToPlay = strings.Replace(aiRoundsToPlay, "\n", "", -1)
 	aiHands, err = strconv.Atoi(aiRoundsToPlay)
 	if err != nil {
 		return nil

@@ -634,8 +634,10 @@ func (h *Hand) DoubleDown(output io.Writer, card cards.Card, name string) {
 
 	h.Bet += h.Bet
 	h.Cards = append(h.Cards, card)
-	fmt.Fprintln(output, h.HandString(name))
 	h.Action = ActionStand
+	if h.Score() > 21 {
+		h.Outcome = OutcomeBust
+	}
 
 }
 
@@ -649,7 +651,7 @@ func (h Hand) HandStringMulti(name string) string {
 	var response string
 
 	if h.Action == ActionDoubleDown {
-		builder.WriteString(name + " hand #" + strconv.Itoa(h.Id) + " has ???: " + "[" + h.Cards[0].String() + "]" + "[" + h.Cards[1].String() + "]" + "[???]\n")
+		builder.WriteString(name + " hand #" + strconv.Itoa(h.Id) + " has ??: " + "[" + h.Cards[0].String() + "]" + "[" + h.Cards[1].String() + "]" + "[???]\n")
 		response += builder.String()
 	} else {
 		for _, card := range h.Cards {

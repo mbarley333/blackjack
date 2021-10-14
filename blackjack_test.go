@@ -626,3 +626,56 @@ func TestGetHint(t *testing.T) {
 	}
 
 }
+
+func TestBust(t *testing.T) {
+	t.Parallel()
+	output := &bytes.Buffer{}
+
+	stack := []cards.Card{
+		{Rank: cards.Ten, Suit: cards.Heart},
+		{Rank: cards.Six, Suit: cards.Club},
+		{Rank: cards.Nine, Suit: cards.Spade},
+		{Rank: cards.Four, Suit: cards.Diamond},
+	}
+
+	deck := cards.Deck{
+		Cards: stack,
+	}
+
+	g, err := blackjack.NewBlackjackGame(
+		blackjack.WithCustomDeck(deck),
+		blackjack.WithOutput(output),
+		blackjack.WithIncomingDeck(false),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	p := &blackjack.Player{
+		Cash: 99,
+		Hands: []*blackjack.Hand{
+			{
+				Cards: []cards.Card{
+					{Rank: cards.Ten, Suit: cards.Heart},
+					{Rank: cards.Nine, Suit: cards.Spade},
+				},
+				Id:  1,
+				Bet: 1,
+			},
+		},
+	}
+
+	g.AddPlayer(p)
+
+	card := g.Deal(output)
+
+	g.Players[0].Hands[0].DoubleDown(output, card, g.Players[0].Name)
+
+	want := blackjack.OutcomeBust.String()
+
+	got := g.Players[0].Hands[0].Outcome.String()
+
+	if want != got {
+		t.Fatalf("want: %q, got: %q", want, got)
+	}
+}

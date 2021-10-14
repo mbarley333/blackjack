@@ -297,7 +297,7 @@ func (g *Game) DealerPlay() {
 		for g.Dealer.Hands[0].Score() <= 16 || (g.Dealer.Hands[0].Score() == 17 && g.Dealer.Hands[0].MinScore() != 17) {
 			card := g.Deal(g.output)
 			g.Dealer.Hands[0].Cards = append(g.Dealer.Hands[0].Cards, card)
-			g.Dealer.Message = "Dealer is dealt a [" + card.String() + "]\n"
+			g.Dealer.Message = "Dealer is dealt a " + card.Render() + "\n"
 			RenderPlayerMessage(g.output, g.Dealer)
 			time.Sleep(2 * time.Second)
 		}
@@ -310,7 +310,6 @@ func (g *Game) Outcome(output io.Writer) {
 
 	g.SetStage(StageOutcome)
 	RenderStageMessage(g.output, g.StageMessage)
-	RenderPlayerAndDealerCards(g.output, g.input, g.Players, g.Dealer, g.Stage)
 
 	var outcome Outcome
 	for _, player := range g.Players {
@@ -330,6 +329,8 @@ func (g *Game) Outcome(output io.Writer) {
 			hand.Outcome = outcome
 
 		}
+
+		RenderPlayerAndDealerCards(g.output, g.input, g.Players, g.Dealer, g.Stage)
 
 		player.SetWinLoseTie()
 
@@ -358,7 +359,7 @@ func RenderGameCli(output io.Writer, input io.Reader, g *Game) error {
 func RenderPlayerAndDealerCards(output io.Writer, input io.Reader, players []*Player, dealer *Player, stage Stage) error {
 
 	fmt.Fprint(output, "\n\n")
-	if stage != StageStart {
+	if stage != StageOutcome {
 		if len(players) == 0 {
 			return fmt.Errorf("game struct does not have any players set")
 		}
@@ -377,11 +378,22 @@ func RenderPlayerAndDealerCards(output io.Writer, input io.Reader, players []*Pl
 		if len(dealer.Hands[0].Cards) == 0 {
 			return fmt.Errorf("dealer does not have any cards.  requires a cards[0] for string")
 		}
-		if stage != StageOutcome {
-			for _, h := range dealer.Hands {
-				fmt.Fprint(output, h.DealerHandString())
+
+		for _, h := range dealer.Hands {
+			fmt.Fprint(output, h.DealerHandString())
+		}
+
+	} else if stage == StageOutcome {
+		for _, player := range players {
+			for _, hand := range player.Hands {
+				if player.HandIndex == 0 {
+					fmt.Fprint(output, ReportMap[hand.Outcome]+" "+hand.HandString(player.Name))
+				} else {
+					fmt.Fprint(output, ReportMap[hand.Outcome]+" "+hand.HandStringMulti(player.Name))
+				}
+
 			}
-		} else {
+
 			for _, h := range dealer.Hands {
 				fmt.Fprint(output, h.HandString(dealer.Name))
 			}

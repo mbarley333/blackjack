@@ -536,15 +536,6 @@ func IsInputValid(answer string, player *Player) (bool, error) {
 	return ok, nil
 }
 
-// func GetCliInput(input io.Reader) string {
-
-// 	reader := bufio.NewReader(input)
-// 	answer, _ := reader.ReadString('\n')
-// 	answer = strings.Replace(answer, "\n", "", -1)
-
-// 	return answer
-// }
-
 func help() {
 	fmt.Fprintln(os.Stderr, `
 	Parameters:

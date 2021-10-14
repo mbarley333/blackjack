@@ -257,7 +257,7 @@ func (g *Game) PlayHand(player *Player) error {
 				player.Message = hand.HandString(player.Name)
 				RenderPlayerMessage(g.output, player)
 
-				hand.Action = player.Decide(g.output, g.input, player, g.Dealer.Hands[0].Cards[0], index, g.CardCounter, g.Stage)
+				hand.Action = player.Decide(g.output, g.input, player, g.Dealer.Hands[0].Cards[1], index, g.CardCounter, g.Stage)
 			}
 			if hand.Action == ActionHit {
 				card := g.Deal(g.output)
@@ -267,7 +267,7 @@ func (g *Game) PlayHand(player *Player) error {
 			} else if hand.Action == ActionDoubleDown {
 				player.Cash -= hand.Bet
 				card := g.Deal(g.output)
-				player.Message = player.Name + " is dealt [???]\n\n"
+				player.Message = player.Name + " is dealt [??]\n\n"
 				hand.DoubleDown(g.output, card, player.Name)
 				RenderPlayerMessage(g.output, player)
 			} else if hand.Action == ActionSplit {

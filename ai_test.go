@@ -123,10 +123,11 @@ func TestAiBasicAction(t *testing.T) {
 		},
 		{
 			playerCards: []cards.Card{{Rank: cards.Ten, Suit: cards.Club}, {Rank: cards.Three, Suit: cards.Club}, {Rank: cards.Two, Suit: cards.Club}},
-			dealerCard:  []cards.Card{{Rank: cards.Seven, Suit: cards.Club}},
+			dealerCard:  []cards.Card{{Rank: cards.Nine, Suit: cards.Club}},
 			action:      blackjack.ActionHit,
 			description: "Hard 12 to 16 w/ Dealer >= 7",
 		},
+
 		{
 			playerCards: []cards.Card{{Rank: cards.Ace, Suit: cards.Club}, {Rank: cards.Ace, Suit: cards.Club}},
 			dealerCard:  []cards.Card{{Rank: cards.Seven, Suit: cards.Club}},

@@ -73,11 +73,11 @@ const (
 )
 
 var ReportMap = map[Outcome]string{
-	OutcomeBlackjack: "***** Blackjack!  Player wins *****",
-	OutcomeWin:       "***** Player wins! *****",
-	OutcomeLose:      "***** Player loses *****",
-	OutcomeTie:       "***** Player and Dealer tie *****",
-	OutcomeBust:      "***** Bust!  Player loses *****",
+	OutcomeBlackjack: "***** BLACKJACK *****",
+	OutcomeWin:       "***** WINNER, WINNER *****",
+	OutcomeLose:      "***** Sorry, you lost *****",
+	OutcomeTie:       "***** TIE *****",
+	OutcomeBust:      "***** OH NO! BUST! *****",
 }
 
 var BalanceReportMap = map[Outcome]string{
@@ -487,7 +487,6 @@ func (p *Player) Split(output io.Writer, card1, card2 cards.Card, index int) {
 	hand := NewHand(id)
 	p.AddHand(hand)
 	indexNewHand := len(p.Hands) - 1
-	//indexNewHand := index + 1
 
 	// take last card in original hand and append to the new split hand
 	card := p.Hands[index].Cards[1]

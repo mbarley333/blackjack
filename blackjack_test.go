@@ -588,9 +588,6 @@ func TestSplit(t *testing.T) {
 func TestGetHint(t *testing.T) {
 	t.Parallel()
 
-	// enter a character at the decision point: ?
-	// get a action string
-
 	output := &bytes.Buffer{}
 	input := strings.NewReader("")
 
@@ -627,7 +624,7 @@ func TestGetHint(t *testing.T) {
 
 }
 
-func TestBust(t *testing.T) {
+func TestBustOnDoubleDown(t *testing.T) {
 	t.Parallel()
 	output := &bytes.Buffer{}
 

@@ -668,11 +668,11 @@ func (h Hand) HandString(name string) string {
 	var response string
 
 	if h.Action == ActionDoubleDown {
-		builder.WriteString(name + " has ???: " + "[" + h.Cards[0].String() + "]" + "[" + h.Cards[1].String() + "]" + "[???]\n")
+		builder.WriteString(name + " has ??: " + h.Cards[0].Render() + h.Cards[1].Render() + "[??]\n")
 		response += builder.String()
 	} else {
 		for _, card := range h.Cards {
-			builder.WriteString("[" + card.String() + "]")
+			builder.WriteString(card.Render())
 		}
 		str := []string{name, " has ", fmt.Sprint(h.Score()), ": ", builder.String(), "\n"}
 		response = strings.Join(str, "")
@@ -686,7 +686,7 @@ func (h Hand) DealerHandString() string {
 	builder := strings.Builder{}
 	var response string
 
-	builder.WriteString("Dealer has: " + "[???][" + h.Cards[1].String() + "]" + "\n")
+	builder.WriteString("Dealer has ??: " + "[??]" + h.Cards[1].Render() + "\n")
 	response += builder.String()
 
 	return response

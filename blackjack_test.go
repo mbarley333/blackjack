@@ -23,6 +23,7 @@ import (
 // player prompt for hit/stand
 
 func TestMultiPlayers(t *testing.T) {
+
 	stack := []cards.Card{
 		{Rank: cards.Ace, Suit: cards.Club},
 		{Rank: cards.Eight, Suit: cards.Club},

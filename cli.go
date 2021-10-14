@@ -104,7 +104,7 @@ func (g *Game) OpeningDeal() {
 			card := g.Deal(g.output)
 			player.Hands[0].Cards = append(player.Hands[0].Cards, card)
 
-			player.Message = player.Name + " is dealt the [" + card.String() + "]\n"
+			player.Message = player.Name + " is dealt the " + card.Render() + "\n"
 
 			RenderPlayerMessage(g.output, player)
 			time.Sleep(750 * time.Millisecond)
@@ -114,9 +114,9 @@ func (g *Game) OpeningDeal() {
 		g.Dealer.Hands[0].Cards = append(g.Dealer.Hands[0].Cards, card)
 
 		if i == 0 {
-			g.Dealer.Message = "Dealer is dealt a [???]\n" + "\n"
+			g.Dealer.Message = "Dealer is dealt a [??]\n" + "\n"
 		} else {
-			g.Dealer.Message = "Dealer is dealt a [" + card.String() + "]\n"
+			g.Dealer.Message = "Dealer is dealt a " + card.Render() + "\n"
 		}
 		RenderPlayerMessage(g.output, g.Dealer)
 		time.Sleep(750 * time.Millisecond)

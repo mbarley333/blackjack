@@ -16,9 +16,9 @@ curl https://raw.githubusercontent.com/mbarley333/blackjack/main/install.sh | sh
 2) For all OS
 * Download the prebuilt binaries for your OS from the Releases section
 * Unzip
-* For Mac, open Finder and locate file
-* 
-* 
+* For Mac on first usage, open Finder and locate the unzipped file
+	Right Click on file > Open
+* cd to folder
 ```bash
 ./blackjack
 ```

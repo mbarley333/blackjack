@@ -33,6 +33,7 @@ curl https://raw.githubusercontent.com/mbarley333/blackjack/main/install.sh | sh
 * Card counting allowed and provided via HiLo method
 * AI Players (Basic Strategy or Stand Only)
 * Hints for Hit, Stand, Double and Split decisions
+* Emojis!!! [A♠][J♥][A♥][K♦]
 
 
 # Getting started

@@ -48,10 +48,13 @@ curl https://raw.githubusercontent.com/mbarley333/blackjack/main/install.sh | sh
         Usage:
         ./blackjack -humanPlayers 1 -aiPlayers 1 -deckCount 7
 ```
-* Enter number of players
-* Enter name of player
-* Select either AI or Human player
-* For AI, enter number of hands to play
+* Set parameters if you want to change the defaults.  Otherwise, just execute as: ./blackjack
+* Enter name of human player(s)
+* Enter name of any Ai players
+* For Ai, choose either (B)asic Strategy or (S)tand Only
+	- Basic Strategy will choose the best play based on player's had vs dealer's up card
+ 	- Stand Only will only stand regardless of player's hand
+* For Ai, enter number of rounds to play
 * From any command line, as a human player, enter "c" to get the card count and the true count
 * In game hint available when "?" is displayed from command line
 ```bash

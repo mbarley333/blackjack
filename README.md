@@ -58,7 +58,13 @@ curl https://raw.githubusercontent.com/mbarley333/blackjack/main/install.sh | sh
 * From any command line, as a human player, enter "c" to get the card count and the true count
 * In game hint available when "?" is displayed from command line
 ```bash
-	Player1 please choose (H)it, (D)ouble, (S)tand (?)Hint: 
+Player1 has 11: [3♦][8♣]
+Dealer has ??: [??][7♠]
+
+
+Player1 has 11: [3♦][8♣]
+Player1 please choose (H)it, (D)ouble, (S)tand (?)Hint: ?
+The suggested action is to Double Down
 ```
 
 

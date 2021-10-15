@@ -7,7 +7,7 @@ Built with Aloha in Hawaii 🌊
 Thank you to @bitfield for all of his mentoring on my Go journey!
 
 
-# Installation Options
+# Installation options
 1) For Mac or Linux, execute the install.sh file
 ```bash
 curl https://raw.githubusercontent.com/mbarley333/blackjack/main/install.sh | sh

@@ -52,7 +52,7 @@ curl https://raw.githubusercontent.com/mbarley333/blackjack/main/install.sh | sh
 * Enter name of human player(s)
 * Enter name of any Ai players
 * For Ai, choose either (B)asic Strategy or (S)tand Only
-	- Basic Strategy will choose the best play based on player's had vs dealer's up card
+	- Basic Strategy will choose the best play based on player's hand vs dealer's up card
  	- Stand Only will only stand regardless of player's hand
 * For Ai, enter number of rounds to play
 * From any command line, as a human player, enter "c" to get the card count and the true count

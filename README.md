@@ -50,7 +50,7 @@ curl https://raw.githubusercontent.com/mbarley333/blackjack/main/install.sh | sh
 ```
 * Set parameters if you want to change the defaults.  Otherwise, just execute as: ./blackjack
 * Enter name of human player(s)
-* Enter name of any Ai players
+* Enter name of any Ai player(s)
 * For Ai, choose either (B)asic Strategy or (S)tand Only
 	- Basic Strategy will choose the best play based on player's hand vs dealer's up card
  	- Stand Only will only stand regardless of player's hand

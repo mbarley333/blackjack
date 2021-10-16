@@ -59,7 +59,7 @@ func TestSetActivePlayer(t *testing.T) {
 	got := g.ActivePlayer
 
 	if !cmp.Equal(want, got) {
-		t.Errorf(cmp.Diff(want, got))
+		t.Fatal(cmp.Diff(want, got))
 	}
 }
 
@@ -100,7 +100,7 @@ func TestStageBetting(t *testing.T) {
 	got := g.Players[0]
 
 	if !cmp.Equal(want, got, cmpopts.IgnoreFields(blackjack.Player{}, "Bet", "Decide")) {
-		t.Errorf(cmp.Diff(want, got))
+		t.Fatal(cmp.Diff(want, got))
 	}
 
 }
@@ -125,7 +125,7 @@ func TestSetDialog(t *testing.T) {
 	got := p
 
 	if !cmp.Equal(want, got, cmpopts.IgnoreFields(blackjack.Player{}, "Message")) {
-		t.Errorf(cmp.Diff(want, got))
+		t.Fatal(cmp.Diff(want, got))
 	}
 
 }
@@ -177,7 +177,7 @@ func TestSetActionBet(t *testing.T) {
 	got := p
 
 	if !cmp.Equal(want, got) {
-		t.Errorf(cmp.Diff(want, got))
+		t.Fatal(cmp.Diff(want, got))
 	}
 
 }
@@ -202,7 +202,7 @@ func TestNewAiPlayer(t *testing.T) {
 	got := blackjack.NewAiPlayer(output, input, index)
 
 	if !cmp.Equal(want, got, cmpopts.IgnoreFields(blackjack.Player{}, "Bet", "Decide")) {
-		t.Error(cmp.Diff(want, got))
+		t.Fatal(cmp.Diff(want, got))
 	}
 
 }

@@ -202,7 +202,7 @@ func TestPayout(t *testing.T) {
 		got := p
 
 		if !cmp.Equal(want, got) {
-			t.Error(cmp.Diff(want, got))
+			t.Fatal(cmp.Diff(want, got))
 		}
 	}
 }
@@ -292,7 +292,7 @@ func TestIncomingDeck(t *testing.T) {
 	got := g.IncomingDeck()
 
 	if cmp.Equal(want, got, cmpopts.IgnoreUnexported(cards.Deck{})) {
-		t.Error(cmp.Diff(want, got))
+		t.Fatal(cmp.Diff(want, got))
 	}
 
 }
@@ -317,7 +317,7 @@ func TestResetFieldsAfterIncomingDeck(t *testing.T) {
 	got := g.CardCounter
 
 	if !cmp.Equal(want, got) {
-		t.Error(cmp.Diff(want, got))
+		t.Fatal(cmp.Diff(want, got))
 	}
 
 	wantCardsDealt := 0
@@ -580,7 +580,7 @@ func TestSplit(t *testing.T) {
 	got := g.Players[0]
 
 	if !cmp.Equal(want, got, cmpopts.IgnoreFields(blackjack.Player{}, "Message")) {
-		t.Error(cmp.Diff(want, got))
+		t.Fatal(cmp.Diff(want, got))
 	}
 
 }

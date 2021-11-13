@@ -27,6 +27,9 @@ filename=$(basename $url)
 tar xvfz ${filename}
 filename="blackjack"
 chmod +x ${filename}
-BLACKJACK_DIR=~/blackjack/$platform
+
+BLACKJACK_DIR=~/.blackjack/$platform
 mkdir -p $BLACKJACK_DIR
 mv $filename ${BLACKJACK_DIR}/${filename%_${platform}}
+echo ""
+echo "installed at: " ${BLACKJACK_DIR}
